@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MIDROP - 내 목록</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #1a1a2e;
+      height: 100vh;
+      font-family: monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 24px 0;
+      gap: 16px;
+      overflow: hidden;
+    }
+    /* ── Page header ── */
+    .page-header {
+      width: 550px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .back-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font: 14px monospace;
+      color: #888;
+      cursor: pointer;
+      text-decoration: none;
+      transition: color 0.12s;
+      flex-shrink: 0;
+    }
+    .back-btn:hover { color: #ccc; }
+    .back-arrow {
+      width: 16px;
+      height: 16px;
+      border-left: 2px solid currentColor;
+      border-bottom: 2px solid currentColor;
+      transform: rotate(45deg);
+      flex-shrink: 0;
+    }
+    .page-title-group {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .page-breadcrumb {
+      font: 12px monospace;
+      color: #555;
+      letter-spacing: 0.03em;
+    }
+    .page-title {
+      font: bold 22px monospace;
+      color: #fff;
+      letter-spacing: 0.04em;
+    }
+    .add-btn {
+      margin-left: auto;
+      font: bold 13px monospace;
+      color: #aeffcb;
+      background: #2d7a4a;
+      border: 1px solid #3d9a5a;
+      border-radius: 6px;
+      padding: 8px 16px;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: background 0.12s, border-color 0.12s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .add-btn:hover {
+      background: #357a52;
+      border-color: #5abf7a;
+    }
+    .divider {
+      width: 550px;
+      height: 1px;
+      background: #2a2a3e;
+    }
+
+    /* ── Card base ── */
+    .card {
+      background: #16213e;
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 18px 24px;
+      width: 550px;
+      transition: background 0.15s, border-color 0.15s;
+      cursor: pointer;
+    }
+    .card:hover {
+      background: #1c2a4a;
+      border-color: #666;
+    }
+
+    /* ── Active card ── */
+    .card.active {
+      border: 2px solid #3d9a5a;
+      cursor: default;
+    }
+    .card.active:hover {
+      background: #1a2e3a;
+      border-color: #5abf7a;
+    }
+
+    /* ── Card header ── */
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 40px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #2a2a3e;
+    }
+    .card-header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 30px; /* keeps header height consistent with or without badge */
+    }
+
+    /* status badge — styled like the ON toggle in settings, hidden unless card is active */
+    .status-badge {
+      display: none;
+      font: bold 11px monospace;
+      color: #aeffcb;
+      background: #2d7a4a;
+      border: 1px solid #3d9a5a;
+      border-radius: 4px;
+      padding: 4px 10px;
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .card.active .status-badge {
+      display: inline-block;
+    }
+
+    .card-name {
+      font: bold 20px monospace;
+      color: #fff;
+      letter-spacing: 0.04em;
+    }
+
+    /* actions always hug the right */
+    .card-actions {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-shrink: 0;
+      align-self: flex-start; /* top-right anchor regardless of header height */
+    }
+    .action-icon {
+      width: 26px;
+      height: 26px;
+      cursor: pointer;
+      filter: invert(1);
+      opacity: 0.6;
+      transition: opacity 0.12s;
+      display: block;
+    }
+    .action-icon:hover { opacity: 1; }
+
+    /* ── Card body ── */
+    .card-body {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+    .card-thumbnail {
+      width: 136px;
+      height: 136px;
+      border: 1px solid #555;
+      border-radius: 4px;
+      background: #222;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .card-info {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .info-row {
+      font: 16px monospace;
+      color: #ccc;
+      letter-spacing: 0.03em;
+    }
+    .info-label {
+      color: #888;
+    }
+    /* ── Confirm dialog ── */
+    #confirm-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    #confirm-overlay.visible { display: flex; }
+    #confirm-dialog {
+      background: #16213e;
+      border: 1px solid #444;
+      border-radius: 10px;
+      padding: 28px 32px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+      min-width: 300px;
+    }
+    #confirm-msg {
+      font: 15px monospace;
+      color: #ccc;
+      text-align: center;
+      line-height: 1.7;
+      letter-spacing: 0.03em;
+    }
+    #confirm-btns { display: flex; gap: 12px; }
+    #btn-cancel {
+      font: bold 13px monospace;
+      color: #aaa;
+      background: #252535;
+      border: 1px solid #444;
+      border-radius: 6px;
+      padding: 8px 20px;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: background 0.12s;
+    }
+    #btn-cancel:hover { background: #303045; }
+    #btn-delete {
+      font: bold 13px monospace;
+      color: #ffaaaa;
+      background: #5a2020;
+      border: 1px solid #7a3030;
+      border-radius: 6px;
+      padding: 8px 20px;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: background 0.12s;
+    }
+    #btn-delete:hover { background: #6a2828; }
+
+    /* ── Toast ── */
+    #toast {
+      display: none;
+      position: fixed;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #16213e;
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 12px 24px;
+      font: 14px monospace;
+      color: #ccc;
+      letter-spacing: 0.03em;
+      z-index: 200;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+    #toast.visible { display: block; }
+
+    /* ── Import dialog ── */
+    #import-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    #import-overlay.visible { display: flex; }
+    #import-dialog {
+      background: #16213e;
+      border: 1px solid #444;
+      border-radius: 10px;
+      padding: 28px 32px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      min-width: 360px;
+    }
+    #import-msg {
+      font: 15px monospace;
+      color: #ccc;
+      text-align: center;
+      line-height: 1.7;
+      letter-spacing: 0.03em;
+    }
+    #import-input {
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid #555;
+      border-radius: 6px;
+      padding: 9px 12px;
+      font: 14px monospace;
+      color: #fff;
+      letter-spacing: 0.03em;
+      outline: none;
+      transition: border-color 0.12s;
+    }
+    #import-input:focus { border-color: #3d9a5a; }
+    #import-input.invalid { border-color: #c04040; background: #2a1515; }
+    #import-input.invalid:focus { border-color: #e05555; }
+    #import-btns { display: flex; gap: 12px; }
+    #btn-import-cancel {
+      font: bold 13px monospace;
+      color: #aaa;
+      background: #252535;
+      border: 1px solid #444;
+      border-radius: 6px;
+      padding: 8px 20px;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: background 0.12s;
+    }
+    #btn-import-cancel:hover { background: #303045; }
+    #btn-import-confirm {
+      font: bold 13px monospace;
+      color: #aeffcb;
+      background: #2d7a4a;
+      border: 1px solid #3d9a5a;
+      border-radius: 6px;
+      padding: 8px 20px;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: background 0.12s, border-color 0.12s;
+    }
+    #btn-import-confirm:hover { background: #357a52; border-color: #5abf7a; }
+
+    #pack-list {
+      align-self: stretch;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      overflow-y: auto;
+      flex: 1;
+      padding-bottom: 32px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="page-header">
+    <a class="back-btn" href="index.html" title="메인으로">
+      <span class="back-arrow"></span>
+      메인
+    </a>
+    <div class="page-title-group">
+      <span class="page-breadcrumb">메인 / 내 목록</span>
+      <span class="page-title">내 목록</span>
+    </div>
+    <button class="add-btn" id="import-btn">↓ 불러오기</button>
+    <button class="add-btn" id="new-pack-btn">+ 새 팩 만들기</button>
+  </div>
+
+  <div class="divider"></div>
+
+  <div id="pack-list"></div>
+
+  <div id="import-overlay">
+    <div id="import-dialog">
+      <p id="import-msg">공유받은 팩 코드를 붙여넣으세요.</p>
+      <input id="import-input" type="text" placeholder="팩 코드 입력" spellcheck="false" autocomplete="off">
+      <div id="import-btns">
+        <button id="btn-import-cancel">취소하기</button>
+        <button id="btn-import-confirm">불러오기</button>
+      </div>
+    </div>
+  </div>
+  <div id="confirm-overlay">
+    <div id="confirm-dialog">
+      <p id="confirm-msg">미노 팩을 삭제하시겠습니까?<br>이 작업은 되돌릴 수 없습니다.</p>
+      <div id="confirm-btns">
+        <button id="btn-cancel">취소</button>
+        <button id="btn-delete">삭제</button>
+      </div>
+    </div>
+  </div>
+  <div id="toast">미노 팩을 삭제했습니다.</div>
+
+  <script type="module" src="library.js"></script>
+</body>
+</html>

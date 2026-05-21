@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MIDROP - 커스터마이징</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #1a1a2e;
+      min-height: 100vh;
+      font-family: monospace;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 32px 24px;
+    }
+
+    #page-col {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* ── Page header ── */
+    .page-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .back-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font: 14px monospace;
+      color: #888;
+      cursor: pointer;
+      text-decoration: none;
+      transition: color 0.12s;
+      flex-shrink: 0;
+    }
+    .back-btn:hover { color: #ccc; }
+    .back-arrow {
+      width: 16px;
+      height: 16px;
+      border-left: 2px solid currentColor;
+      border-bottom: 2px solid currentColor;
+      transform: rotate(45deg);
+      flex-shrink: 0;
+    }
+    .page-title-group {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .page-breadcrumb {
+      font: 12px monospace;
+      color: #555;
+      letter-spacing: 0.03em;
+    }
+    .page-title {
+      font: bold 22px monospace;
+      color: #fff;
+      letter-spacing: 0.04em;
+    }
+    .save-btn {
+      margin-left: auto;
+      font: bold 13px monospace;
+      color: #aeffcb;
+      background: #2d7a4a;
+      border: 1px solid #3d9a5a;
+      border-radius: 6px;
+      padding: 8px 16px;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: background 0.12s, border-color 0.12s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .save-btn:hover { background: #357a52; border-color: #5abf7a; }
+
+    .divider {
+      height: 1px;
+      background: #2a2a3e;
+    }
+
+    /* ── Name row ── */
+    #name-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    #name-label {
+      font: bold 13px monospace;
+      color: #aaa;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+    }
+    #mino-name-input {
+      padding: 6px 10px;
+      font: 14px monospace;
+      background: #222;
+      color: #ccc;
+      border: 1px solid #555;
+      border-radius: 4px;
+      outline: none;
+      width: 220px;
+      letter-spacing: 0.03em;
+    }
+    #mino-name-input:focus { border-color: #777; }
+
+    /* ── Editor area ── */
+    #wrapper {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    #action-undo, #action-redo {
+      opacity: 0.2;
+      transition: opacity 0.15s;
+    }
+    #action-undo.available, #action-redo.available { opacity: 1; }
+    #grid-canvas {
+      border: 2px solid #333;
+      display: block;
+    }
+    #tools-panel, #color-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .panel-section {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .section-title {
+      font: bold 13px monospace;
+      color: #aaa;
+      letter-spacing: 0.06em;
+    }
+    #grid-size-select {
+      width: 130px;
+      padding: 5px 8px;
+      font: 13px monospace;
+      background: #333;
+      color: #ccc;
+      border: 1px solid #555;
+      border-radius: 4px;
+      cursor: pointer;
+      outline: none;
+    }
+    #grid-size-select:focus { border-color: #777; }
+    .icon-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .tool-icon {
+      width: 32px;
+      height: 32px;
+      display: block;
+      cursor: pointer;
+      opacity: 0.75;
+      filter: invert(1);
+      border-radius: 5px;
+    }
+    .tool-icon.selected {
+      opacity: 1;
+      background: rgba(0,0,0,0.15);
+      box-shadow: 0 0 0 2px #000;
+    }
+    #picker-canvas {
+      display: block;
+      cursor: crosshair;
+      border: 1px solid #444;
+    }
+    #hue-canvas {
+      display: block;
+      cursor: pointer;
+      border: 1px solid #444;
+      margin-top: 6px;
+    }
+    #hex-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 8px;
+      width: 180px;
+    }
+    #hex-label {
+      font: bold 14px monospace;
+      color: #aaa;
+      flex-shrink: 0;
+    }
+    #hex-input {
+      flex: 1;
+      padding: 4px 8px;
+      font: 13px monospace;
+      background: #333;
+      color: #ccc;
+      border: 1px solid #555;
+      border-radius: 4px;
+      outline: none;
+      text-transform: uppercase;
+    }
+    #hex-input:focus { border-color: #777; }
+    #hex-input.invalid { border-color: #c04040; background: #2a1515; color: #e08080; }
+
+    /* ── Toast ── */
+    #toast {
+      display: none;
+      position: fixed;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #16213e;
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 12px 24px;
+      font: 14px monospace;
+      color: #ccc;
+      letter-spacing: 0.03em;
+      z-index: 200;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+    #toast.visible { display: block; }
+
+    /* ── Overwrite dialog ── */
+    #overwrite-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    #overwrite-overlay.visible { display: flex; }
+    #overwrite-dialog {
+      background: #16213e;
+      border: 1px solid #444;
+      border-radius: 10px;
+      padding: 28px 32px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+      min-width: 300px;
+    }
+    #overwrite-msg {
+      font: 15px monospace;
+      color: #ccc;
+      text-align: center;
+      line-height: 1.7;
+      letter-spacing: 0.03em;
+    }
+    #overwrite-btns { display: flex; gap: 12px; }
+    #btn-overwrite-cancel {
+      font: bold 13px monospace;
+      color: #aaa;
+      background: #252535;
+      border: 1px solid #444;
+      border-radius: 6px;
+      padding: 8px 20px;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: background 0.12s;
+    }
+    #btn-overwrite-cancel:hover { background: #303045; }
+    #btn-overwrite-confirm {
+      font: bold 13px monospace;
+      color: #ffd580;
+      background: #5a4010;
+      border: 1px solid #7a5a20;
+      border-radius: 6px;
+      padding: 8px 20px;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: background 0.12s;
+    }
+    #btn-overwrite-confirm:hover { background: #6a4e18; }
+  </style>
+</head>
+<body>
+  <div id="page-col">
+
+    <div class="page-header">
+      <a class="back-btn" href="pack.html" title="팩 편집으로">
+        <span class="back-arrow"></span>
+        팩 편집
+      </a>
+      <div class="page-title-group">
+        <span class="page-breadcrumb">팩 편집 / 미노 커스터마이즈</span>
+        <span class="page-title">미노 커스터마이즈</span>
+      </div>
+      <button class="save-btn">저장하기</button>
+    </div>
+
+    <div class="divider"></div>
+
+    <div id="name-row">
+      <span id="name-label">미노 이름</span>
+      <input id="mino-name-input" type="text" placeholder="이름을 입력하세요" maxlength="32" spellcheck="false">
+    </div>
+
+    <div id="wrapper">
+      <div id="tools-panel">
+        <div class="panel-section">
+          <span class="section-title">격자 크기</span>
+          <select id="grid-size-select"></select>
+        </div>
+        <div class="panel-section">
+          <span class="section-title">작업</span>
+          <div class="icon-row">
+            <img class="tool-icon" id="action-undo" src="img/undo.png" alt="undo">
+            <img class="tool-icon" id="action-redo" src="img/redo.png" alt="redo">
+          </div>
+        </div>
+        <div class="panel-section">
+          <span class="section-title">도구</span>
+          <div class="icon-row">
+            <img class="tool-icon selected" id="tool-pencil"    src="img/pencil.png"    alt="pencil">
+            <img class="tool-icon"          id="tool-eraser"    src="img/eraser.png"    alt="eraser">
+            <img class="tool-icon"          id="tool-paint-all" src="img/paint-all.png" alt="paint-all">
+            <img class="tool-icon"          id="tool-erase-all" src="img/erase-all.png" alt="erase-all">
+          </div>
+        </div>
+      </div>
+      <div class="panel-section">
+        <span class="section-title">캔버스</span>
+        <canvas id="grid-canvas"></canvas>
+      </div>
+      <div id="color-panel">
+        <div class="panel-section">
+          <span class="section-title">색상</span>
+          <canvas id="picker-canvas" width="180" height="180"></canvas>
+          <canvas id="hue-canvas" width="180" height="16"></canvas>
+          <div id="hex-row">
+            <span id="hex-label">#</span>
+            <input id="hex-input" type="text" maxlength="6" spellcheck="false">
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div id="overwrite-overlay">
+    <div id="overwrite-dialog">
+      <p id="overwrite-msg">같은 이름의 미노가 존재합니다.<br>미노 데이터를 덮어쓰기 할까요?</p>
+      <div id="overwrite-btns">
+        <button id="btn-overwrite-cancel">취소하기</button>
+        <button id="btn-overwrite-confirm">덮어쓰기</button>
+      </div>
+    </div>
+  </div>
+  <div id="toast"></div>
+  <script type="module" src="customize.js"></script>
+</body>
+</html>

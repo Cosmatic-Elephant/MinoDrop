@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MIDROP - 팩 편집</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #1a1a2e;
+      min-height: 100vh;
+      font-family: monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 24px;
+      gap: 32px;
+    }
+
+    /* ── Page header ── */
+    .page-header {
+      width: 550px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .back-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font: 14px monospace;
+      color: #888;
+      cursor: pointer;
+      text-decoration: none;
+      transition: color 0.12s;
+      flex-shrink: 0;
+    }
+    .back-btn:hover { color: #ccc; }
+    .back-arrow {
+      width: 16px;
+      height: 16px;
+      border-left: 2px solid currentColor;
+      border-bottom: 2px solid currentColor;
+      transform: rotate(45deg);
+      flex-shrink: 0;
+    }
+    .page-title-group {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .page-breadcrumb {
+      font: 12px monospace;
+      color: #555;
+      letter-spacing: 0.03em;
+    }
+    .page-title-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .page-title {
+      font: bold 22px monospace;
+      color: #fff;
+      letter-spacing: 0.04em;
+    }
+    .pack-rename-btn {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      filter: invert(1);
+      opacity: 0.5;
+      transition: opacity 0.12s;
+      display: block;
+      flex-shrink: 0;
+    }
+    .pack-rename-btn:hover { opacity: 1; }
+    .add-btn {
+      margin-left: auto;
+      font: bold 13px monospace;
+      color: #aeffcb;
+      background: #2d7a4a;
+      border: 1px solid #3d9a5a;
+      border-radius: 6px;
+      padding: 8px 16px;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: background 0.12s, border-color 0.12s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .add-btn:hover {
+      background: #357a52;
+      border-color: #5abf7a;
+    }
+
+    /* ── Divider ── */
+    .divider {
+      width: 550px;
+      height: 1px;
+      background: #2a2a3e;
+    }
+
+    /* ── Mino grid ── */
+    .mino-grid {
+      width: 550px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    /* ── Mino card ── */
+    .mino-card {
+      width: 152px;
+      background: #16213e;
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 16px 14px 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      transition: background 0.15s, border-color 0.15s;
+      cursor: pointer;
+    }
+    .mino-card:hover {
+      background: #1c2a4a;
+      border-color: #666;
+    }
+    .mino-card.active {
+      border: 2px solid #3d9a5a;
+      cursor: default;
+    }
+    .mino-card.active:hover {
+      background: #1a2e3a;
+      border-color: #5abf7a;
+    }
+
+    /* thumbnail canvas area */
+    .mino-thumbnail {
+      width: 120px;
+      height: 120px;
+      border: 1px solid #555;
+      border-radius: 4px;
+      background: #111827;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    /* mino info */
+    .mino-info {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .mino-name {
+      font: bold 15px monospace;
+      color: #fff;
+      letter-spacing: 0.03em;
+    }
+    .mino-size {
+      font: 13px monospace;
+      color: #888;
+      letter-spacing: 0.03em;
+    }
+
+    /* bottom action row */
+    .mino-actions {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 8px;
+      border-top: 1px solid #2a2a3e;
+    }
+    .mino-action-icon {
+      width: 26px;
+      height: 26px;
+      cursor: pointer;
+      filter: invert(1);
+      opacity: 0.6;
+      transition: opacity 0.12s;
+      display: block;
+    }
+    .mino-action-icon:hover { opacity: 1; }
+
+    /* ── Confirm dialog ── */
+    #confirm-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    #confirm-overlay.visible { display: flex; }
+    #confirm-dialog {
+      background: #16213e;
+      border: 1px solid #444;
+      border-radius: 10px;
+      padding: 28px 32px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+      min-width: 300px;
+    }
+    #confirm-msg {
+      font: 15px monospace;
+      color: #ccc;
+      text-align: center;
+      line-height: 1.7;
+      letter-spacing: 0.03em;
+    }
+    #confirm-btns { display: flex; gap: 12px; }
+    #btn-cancel {
+      font: bold 13px monospace;
+      color: #aaa;
+      background: #252535;
+      border: 1px solid #444;
+      border-radius: 6px;
+      padding: 8px 20px;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: background 0.12s;
+    }
+    #btn-cancel:hover { background: #303045; }
+    #btn-delete {
+      font: bold 13px monospace;
+      color: #ffaaaa;
+      background: #5a2020;
+      border: 1px solid #7a3030;
+      border-radius: 6px;
+      padding: 8px 20px;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: background 0.12s;
+    }
+    #btn-delete:hover { background: #6a2828; }
+
+    /* ── Rename dialog ── */
+    #rename-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    #rename-overlay.visible { display: flex; }
+    #rename-dialog {
+      background: #16213e;
+      border: 1px solid #444;
+      border-radius: 10px;
+      padding: 28px 32px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      min-width: 320px;
+    }
+    #rename-msg {
+      font: 15px monospace;
+      color: #ccc;
+      text-align: center;
+      line-height: 1.7;
+      letter-spacing: 0.03em;
+    }
+    #rename-input {
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid #555;
+      border-radius: 6px;
+      padding: 9px 12px;
+      font: 14px monospace;
+      color: #fff;
+      letter-spacing: 0.03em;
+      outline: none;
+      transition: border-color 0.12s;
+    }
+    #rename-input:focus { border-color: #3d9a5a; }
+    #rename-input.invalid { border-color: #c04040; background: #2a1515; }
+    #rename-input.invalid:focus { border-color: #e05555; }
+    #rename-btns { display: flex; gap: 12px; }
+    #btn-rename-cancel {
+      font: bold 13px monospace;
+      color: #aaa;
+      background: #252535;
+      border: 1px solid #444;
+      border-radius: 6px;
+      padding: 8px 20px;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: background 0.12s;
+    }
+    #btn-rename-cancel:hover { background: #303045; }
+    #btn-rename-save {
+      font: bold 13px monospace;
+      color: #aeffcb;
+      background: #2d7a4a;
+      border: 1px solid #3d9a5a;
+      border-radius: 6px;
+      padding: 8px 20px;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: background 0.12s, border-color 0.12s;
+    }
+    #btn-rename-save:hover { background: #357a52; border-color: #5abf7a; }
+
+    /* ── Toast ── */
+    #toast {
+      display: none;
+      position: fixed;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #16213e;
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 12px 24px;
+      font: 14px monospace;
+      color: #ccc;
+      letter-spacing: 0.03em;
+      z-index: 200;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+    #toast.visible { display: block; }
+  </style>
+</head>
+<body>
+
+  <!-- 페이지 헤더 -->
+  <div class="page-header">
+    <a class="back-btn" href="library.html" title="목록으로">
+      <span class="back-arrow"></span>
+      목록
+    </a>
+    <div class="page-title-group">
+      <span class="page-breadcrumb">내 목록 / 팩 편집</span>
+      <div class="page-title-row">
+        <span class="page-title">나만의 미노팩</span>
+        <img class="pack-rename-btn" src="img/pencil.png" alt="이름 편집" title="팩 이름 변경" id="pack-rename-btn">
+      </div>
+    </div>
+    <button class="add-btn" onclick="location.href='customize.html'">+ 미노 추가</button>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- 미노 그리드 -->
+  <div class="mino-grid" id="mino-grid"></div>
+
+  <div id="confirm-overlay">
+    <div id="confirm-dialog">
+      <p id="confirm-msg">미노를 삭제하시겠습니까?<br>이 작업은 되돌릴 수 없습니다.</p>
+      <div id="confirm-btns">
+        <button id="btn-cancel">취소</button>
+        <button id="btn-delete">삭제</button>
+      </div>
+    </div>
+  </div>
+  <div id="rename-overlay">
+    <div id="rename-dialog">
+      <p id="rename-msg">바꾸고싶은 팩 이름을 입력하세요.</p>
+      <input id="rename-input" type="text" maxlength="40">
+      <div id="rename-btns">
+        <button id="btn-rename-cancel">취소하기</button>
+        <button id="btn-rename-save">저장하기</button>
+      </div>
+    </div>
+  </div>
+  <div id="toast">미노를 삭제했습니다.</div>
+
+  <script type="module" src="pack.js"></script>
+</body>
+</html>
