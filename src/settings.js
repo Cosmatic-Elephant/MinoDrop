@@ -34,6 +34,30 @@ export class GameSettings {
     HOLD:       'ShiftLeft',
   });
 
+  static STORAGE_KEY = 'midrop_settings';
+
+  static load() {
+    const inst = new GameSettings();
+    const raw = localStorage.getItem(GameSettings.STORAGE_KEY);
+    if (!raw) return inst;
+    try {
+      const saved = JSON.parse(raw);
+      for (const key of Object.keys(GameSettings.DEFAULTS)) {
+        if (key in saved) inst[key] = saved[key];
+      }
+      if (saved.KEYBINDS && typeof saved.KEYBINDS === 'object') {
+        for (const key of Object.keys(GameSettings.DEFAULT_KEYBINDS)) {
+          if (key in saved.KEYBINDS) inst.KEYBINDS[key] = saved.KEYBINDS[key];
+        }
+      }
+    } catch { /* 손상된 데이터 → 기본값 유지 */ }
+    return inst;
+  }
+
+  save() {
+    localStorage.setItem(GameSettings.STORAGE_KEY, JSON.stringify(this));
+  }
+
   constructor() {
     this.reset();
   }

@@ -350,6 +350,42 @@
       animation: kb-pulse 0.8s ease-in-out infinite;
     }
     .keybind-btn.unbound { color: #555; }
+    .info-field {
+      font: 13px monospace;
+      color: #aaa;
+      letter-spacing: 0.06em;
+      text-align: center;
+      padding: 5px 12px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 4px;
+      width: 165px;
+    }
+    .pause-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+    .pause-btn:disabled:hover { background: rgba(255,255,255,0.1); }
+    .btn-start-wrap {
+      position: relative;
+      display: inline-block;
+    }
+    .btn-start-wrap:has(#btn-start:disabled):hover::after {
+      content: '미노 팩이 필드보다 넓습니다';
+      position: absolute;
+      bottom: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      white-space: nowrap;
+      background: rgba(30, 30, 30, 0.95);
+      color: #f88;
+      font: 12px monospace;
+      padding: 5px 10px;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 100, 100, 0.35);
+      pointer-events: none;
+      z-index: 10;
+    }
     @keyframes kb-pulse {
       0%, 100% { border-color: #ffe066; }
       50%       { border-color: #6e5500; }
@@ -369,7 +405,11 @@
       <div id="overlay-seed"></div>
       <div id="overlay-sub"></div>
       <div id="start-buttons">
-        <button class="pause-btn">게임 시작</button>
+        <div id="active-pack-info" class="info-field">미노 팩 - ...</div>
+        <div id="active-kick-info" class="info-field">킥테이블 - SRS</div>
+        <div class="btn-start-wrap">
+          <button id="btn-start" class="pause-btn">게임 시작</button>
+        </div>
         <button class="pause-btn">설정</button>
         <button class="pause-btn">조작키 변경</button>
         <button class="pause-btn" onclick="location.href='library.html'">커스터마이징</button>

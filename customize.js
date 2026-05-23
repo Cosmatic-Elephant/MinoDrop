@@ -49,6 +49,7 @@ function doSaveNew(pack, packs, minoName, newShape, newKey, color) {
   }
   pack.minos.push({ name: minoName, color, shape: newShape });
   pack.minoCount = pack.minos.length;
+  pack.size = Math.max(...pack.minos.map(m => m.shape.length));
   pack.code = encodePack(pack);
   sessionStorage.setItem('midrop_editing_pack', pack.code);
   savePacks(packs);
@@ -64,6 +65,7 @@ function doOverwrite(pack, packs, existingIdx, minoName, newShape, newKey, color
   }
   pack.minos[existingIdx] = { name: minoName, color, shape: newShape };
   pack.minoCount = pack.minos.length;
+  pack.size = Math.max(...pack.minos.map(m => m.shape.length));
   pack.code = encodePack(pack);
   sessionStorage.setItem('midrop_editing_pack', pack.code);
   savePacks(packs);

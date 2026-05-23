@@ -196,10 +196,11 @@ function renderList() {
   });
 
   const cards = list.querySelectorAll('.card');
-  cards.forEach(card => {
+  cards.forEach((card, idx) => {
     card.addEventListener('click', () => {
       cards.forEach(c => c.classList.remove('active'));
       card.classList.add('active');
+      setActivePack(idx);
     });
     card.querySelector('.card-actions').addEventListener('click', e => e.stopPropagation());
   });

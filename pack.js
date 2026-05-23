@@ -182,6 +182,7 @@ function renderGrid() {
         }
         pack.minos.splice(minoIdx, 1);
         pack.minoCount = pack.minos.length;
+        pack.size = pack.minos.length ? Math.max(...pack.minos.map(m => m.shape.length)) : 0;
         pack.code = encodePack(pack);
         code = pack.code;
         sessionStorage.setItem('midrop_editing_pack', code);

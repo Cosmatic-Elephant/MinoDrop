@@ -5,8 +5,9 @@ import { Renderer } from './src/render/renderer.js';
 import { Keyboard } from './src/input/keyboard.js';
 import { GameSettings } from './src/settings.js';
 import { makeRng } from './src/rng.js';
+import { getActivePack } from './src/data/packStore.js';
 
-let settings = new GameSettings();
+let settings = GameSettings.load();
 
 const canvas      = document.getElementById('game');
 const holdCanvas  = document.getElementById('hold');
@@ -24,6 +25,7 @@ const keybindOverlay   = document.getElementById('keybind-overlay');
 const keybindBody      = document.getElementById('keybind-body');
 const seedDisplayEl    = document.getElementById('seed-display');
 const overlaySeedEl    = document.getElementById('overlay-seed');
+const activePackInfoEl = document.getElementById('active-pack-info');
 const levelEl            = document.getElementById('level-text');
 const inputCols          = document.getElementById('input-cols');
 const inputRows          = document.getElementById('input-rows');
@@ -54,6 +56,17 @@ function validateInput({ el, min, max }) {
   const ok = Number.isFinite(v) && v >= min && v <= max;
   el.classList.toggle('invalid', !ok);
   return ok;
+}
+
+function updatePackInfo() {
+  const pack = getActivePack();
+  activePackInfoEl.textContent = `미노 팩 - ${pack.name}`;
+  const packSize = pack.minos?.length
+    ? Math.max(...pack.minos.map(m => m.shape.length))
+    : (pack.size ?? 0);
+  const tooWide = packSize > settings.COLS;
+  const btnStart = document.getElementById('btn-start');
+  if (btnStart) btnStart.disabled = tooWide;
 }
 
 function showOverlay(main, sub = '', mode = '') {
@@ -220,6 +233,7 @@ function closeKeybinds() {
   keybindOpen = false;
   stopListening();
   keybindOverlay.classList.remove('visible');
+  settings.save();
 }
 
 // Capture-phase listener: intercepts all keys while keybind overlay is open
@@ -277,10 +291,16 @@ function applySettings() {
   next.B2B_HIGHLIGHT       = toggleB2bHighlight.classList.contains('on');
   next.ALL_SPIN_B2B        = toggleAllSpinB2b.classList.contains('on');
   settings = next;
+  settings.save();
   kb.setPrevent(Object.values(settings.KEYBINDS));
   renderer.ghostWhite = settings.GHOST_WHITE;
   renderer.ghostStyle = settings.GHOST_STYLE;
   closeSettings();
+  updatePackInfo();
+  if (!gameStarted) {
+    setGameField(settings.COLS, settings.ROWS);
+    renderer.resize();
+  }
 }
 
 document.getElementById('settings-close').addEventListener('click', closeSettings);
@@ -805,6 +825,7 @@ window.addEventListener('keydown', e => {
   if (settingsOpen) { closeSettings(); return; }
   if (gameOver) { restartGame(); return; }
   if (!gameStarted) {
+    if (document.getElementById('btn-start')?.disabled) return;
     restartGame();
     gameStarted = true;
     return;
@@ -870,7 +891,7 @@ function goToMain() {
 }
 
 startBtns[0].addEventListener('click', () => {
-  if (!gameStarted) { restartGame(); gameStarted = true; }
+  if (!gameStarted && !startBtns[0].disabled) { restartGame(); gameStarted = true; }
 });
 startBtns[1].addEventListener('click', openSettings);
 startBtns[2].addEventListener('click', openKeybinds);
@@ -979,4 +1000,5 @@ function loop(ts) {
   requestAnimationFrame(loop);
 }
 
+updatePackInfo();
 requestAnimationFrame(loop);
