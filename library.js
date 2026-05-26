@@ -8,6 +8,7 @@ function showImportDialog() {
   const input = document.getElementById('import-input');
   input.value = '';
   input.classList.remove('invalid');
+  document.getElementById('allow-dup-checkbox').checked = false;
   document.getElementById('import-overlay').classList.add('visible');
   input.focus();
 }
@@ -39,10 +40,22 @@ function importPack() {
   }
 
   const packs = getPacks();
-  if (packs.some(p => p.code === codeStr)) {
+  const isDuplicate = packs.some(p => p.code === codeStr);
+  const allowDup = document.getElementById('allow-dup-checkbox').checked;
+
+  if (isDuplicate && !allowDup) {
     input.classList.add('invalid');
     showToast('이미 추가된 팩입니다.');
     return;
+  }
+
+  if (isDuplicate && allowDup) {
+    const baseName = pack.name;
+    const existingNames = new Set(packs.map(p => p.name));
+    let n = 1;
+    while (existingNames.has(`${baseName}(${n})`)) n++;
+    pack.name = `${baseName}(${n})`;
+    pack.code = encodePack(pack);
   }
 
   packs.push(pack);

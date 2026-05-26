@@ -5,7 +5,8 @@ import { Renderer } from './src/render/renderer.js';
 import { Keyboard } from './src/input/keyboard.js';
 import { GameSettings } from './src/settings.js';
 import { makeRng } from './src/rng.js';
-import { getActivePack } from './src/data/packStore.js';
+import { getActivePack, getPacks, getActiveIndex, setActivePack } from './src/data/packStore.js';
+import { refreshPack } from './src/data/pieces.js';
 
 let settings = GameSettings.load();
 
@@ -26,6 +27,9 @@ const keybindBody      = document.getElementById('keybind-body');
 const seedDisplayEl    = document.getElementById('seed-display');
 const overlaySeedEl    = document.getElementById('overlay-seed');
 const activePackInfoEl = document.getElementById('active-pack-info');
+const activeKickInfoEl = document.getElementById('active-kick-info');
+const packSelect       = document.getElementById('pack-select');
+const kickSelect       = document.getElementById('kick-select');
 const levelEl            = document.getElementById('level-text');
 const inputCols          = document.getElementById('input-cols');
 const inputRows          = document.getElementById('input-rows');
@@ -61,6 +65,7 @@ function validateInput({ el, min, max }) {
 function updatePackInfo() {
   const pack = getActivePack();
   activePackInfoEl.textContent = `미노 팩 - ${pack.name}`;
+  activeKickInfoEl.textContent = `킥테이블 - ${kickSelect?.value ?? 'SRS'}`;
   const packSize = pack.minos?.length
     ? Math.max(...pack.minos.map(m => m.shape.length))
     : (pack.size ?? 0);
@@ -86,6 +91,24 @@ let listeningAction = null;
 
 function openSettings() {
   settingsOpen = true;
+
+  packSelect.innerHTML = '';
+  const packs = getPacks();
+  if (packs.length === 0) {
+    const opt = document.createElement('option');
+    opt.value = '-1';
+    opt.textContent = '없음';
+    packSelect.appendChild(opt);
+  } else {
+    packs.forEach((pack, i) => {
+      const opt = document.createElement('option');
+      opt.value = String(i);
+      opt.textContent = pack.name;
+      packSelect.appendChild(opt);
+    });
+    packSelect.value = String(getActiveIndex());
+  }
+
   inputCols.value = settings.COLS;
   inputRows.value = settings.ROWS;
   inputSeed.value = settings.SEED;
@@ -292,6 +315,8 @@ function applySettings() {
   next.ALL_SPIN_B2B        = toggleAllSpinB2b.classList.contains('on');
   settings = next;
   settings.save();
+  const packIdx = parseInt(packSelect.value, 10);
+  if (packIdx >= 0) { setActivePack(packIdx); refreshPack(); }
   kb.setPrevent(Object.values(settings.KEYBINDS));
   renderer.ghostWhite = settings.GHOST_WHITE;
   renderer.ghostStyle = settings.GHOST_STYLE;
@@ -725,8 +750,8 @@ function finishLineClear() {
   if (!settings.LEVEL_LOCK)
     level = Math.min(settings.START_LEVEL + Math.floor(totalLinesCleared / 10), 15);
 
-  const LINE_NAMES = ['', 'SINGLE', 'DOUBLE', 'TRIPLE', 'QUAD'];
-  const lineName = LINE_NAMES[Math.min(nLines, 4)];
+  const LINE_NAMES = ['', 'SINGLE', 'DOUBLE', 'TRIPLE', 'QUAD', 'PENTA', 'HEXA', 'HEPTA', 'OCTA', 'NONA', 'DECA'];
+  const lineName = LINE_NAMES[Math.min(nLines, 10)];
   const isTSpin = pendingSpinLabel === 'T-Spin';
   const hasSpin = pendingSpinLabel !== '';
   const isB2bQualifying = nLines === 4 || isTSpin || (settings.ALL_SPIN_B2B && hasSpin);

@@ -316,6 +316,18 @@
     #import-input:focus { border-color: #3d9a5a; }
     #import-input.invalid { border-color: #c04040; background: #2a1515; }
     #import-input.invalid:focus { border-color: #e05555; }
+    #allow-dup-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font: 13px monospace;
+      color: #888;
+      cursor: pointer;
+      align-self: flex-start;
+      user-select: none;
+    }
+    #allow-dup-label:hover { color: #aaa; }
+    #allow-dup-checkbox { cursor: pointer; accent-color: #3d9a5a; width: 14px; height: 14px; }
     #import-btns { display: flex; gap: 12px; }
     #btn-import-cancel {
       font: bold 13px monospace;
@@ -377,6 +389,10 @@
     <div id="import-dialog">
       <p id="import-msg">공유받은 팩 코드를 붙여넣으세요.</p>
       <input id="import-input" type="text" placeholder="팩 코드 입력" spellcheck="false" autocomplete="off">
+      <label id="allow-dup-label">
+        <input type="checkbox" id="allow-dup-checkbox">
+        팩 중복 추가 허용하기
+      </label>
       <div id="import-btns">
         <button id="btn-import-cancel">취소하기</button>
         <button id="btn-import-confirm">불러오기</button>
