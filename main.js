@@ -69,9 +69,21 @@ function updatePackInfo() {
   const packSize = pack.minos?.length
     ? Math.max(...pack.minos.map(m => m.shape.length))
     : (pack.size ?? 0);
+  const minoCount = pack.minos?.length ?? pack.minoCount ?? 0;
   const tooWide = packSize > settings.COLS;
   const btnStart = document.getElementById('btn-start');
-  if (btnStart) btnStart.disabled = tooWide;
+  if (btnStart) {
+    if (minoCount === 0) {
+      btnStart.disabled = true;
+      btnStart.dataset.disabledReason = 'noMinos';
+    } else if (tooWide) {
+      btnStart.disabled = true;
+      btnStart.dataset.disabledReason = 'tooWide';
+    } else {
+      btnStart.disabled = false;
+      delete btnStart.dataset.disabledReason;
+    }
+  }
 }
 
 function showOverlay(main, sub = '', mode = '') {

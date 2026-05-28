@@ -4,6 +4,16 @@ import { DEFAULT_PACK } from './src/data/defaultPack.js';
 const BASE_CELL = 30;
 let pendingDelete = null;
 
+function resolveCodeConflict(pack, packs) {
+  if (!packs.some(p => p.code === pack.code)) return;
+  const baseName = pack.name;
+  let n = 1;
+  do {
+    pack.name = `${baseName}(${n++})`;
+    pack.code = encodePack(pack);
+  } while (packs.some(p => p.code === pack.code));
+}
+
 function showImportDialog() {
   const input = document.getElementById('import-input');
   input.value = '';
@@ -50,12 +60,7 @@ function importPack() {
   }
 
   if (isDuplicate && allowDup) {
-    const baseName = pack.name;
-    const existingNames = new Set(packs.map(p => p.name));
-    let n = 1;
-    while (existingNames.has(`${baseName}(${n})`)) n++;
-    pack.name = `${baseName}(${n})`;
-    pack.code = encodePack(pack);
+    resolveCodeConflict(pack, packs);
   }
 
   packs.push(pack);
@@ -257,6 +262,7 @@ function init() {
     };
     newPack.code = encodePack(newPack);
     const packs = getPacks();
+    resolveCodeConflict(newPack, packs);
     packs.push(newPack);
     savePacks(packs);
     renderList();

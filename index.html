@@ -379,7 +379,6 @@
       display: inline-block;
     }
     .btn-start-wrap:has(#btn-start:disabled):hover::after {
-      content: '미노 팩이 필드보다 넓습니다';
       position: absolute;
       bottom: calc(100% + 6px);
       left: 50%;
@@ -393,6 +392,12 @@
       border: 1px solid rgba(255, 100, 100, 0.35);
       pointer-events: none;
       z-index: 10;
+    }
+    .btn-start-wrap:has(#btn-start[data-disabled-reason="tooWide"]):hover::after {
+      content: '미노 팩이 필드보다 넓습니다';
+    }
+    .btn-start-wrap:has(#btn-start[data-disabled-reason="noMinos"]):hover::after {
+      content: '팩에 미노가 없습니다';
     }
     @keyframes kb-pulse {
       0%, 100% { border-color: #ffe066; }
