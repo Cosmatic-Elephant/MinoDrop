@@ -167,7 +167,7 @@ function renderGrid() {
 
     card.querySelector('.mino-action-icon[title="편집"]').addEventListener('click', () => {
       sessionStorage.setItem('midrop_editing_mino', JSON.stringify(mino));
-      location.href = 'customize.html';
+      location.href = 'customize_mino.html';
     });
 
     card.querySelector('.mino-action-icon[title="삭제"]').addEventListener('click', () => {

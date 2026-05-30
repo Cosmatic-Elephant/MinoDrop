@@ -77,10 +77,38 @@
       background: #357a52;
       border-color: #5abf7a;
     }
-    .divider {
+    /* ── Tab bar ── */
+    .tab-bar {
       width: 550px;
-      height: 1px;
-      background: #2a2a3e;
+      display: flex;
+      align-items: flex-end;
+      gap: 4px;
+      border-bottom: 1px solid #2a2a3e;
+    }
+    .tab {
+      padding: 8px 20px;
+      font: 13px monospace;
+      color: #555;
+      text-decoration: none;
+      border: 1px solid transparent;
+      border-bottom: none;
+      border-radius: 6px 6px 0 0;
+      transition: color 0.12s, background 0.12s, border-color 0.12s;
+      letter-spacing: 0.03em;
+    }
+    .tab:hover {
+      color: #999;
+      background: #16213e;
+      border-color: #2a2a3e;
+    }
+    .tab.active {
+      color: #fff;
+      background: #1a1a2e;
+      border-color: #2a2a3e;
+      border-bottom-color: #1a1a2e;
+      margin-bottom: -1px;
+      cursor: default;
+      pointer-events: none;
     }
 
     /* ── Card base ── */
@@ -217,12 +245,36 @@
       <span class="page-title">킥 목록</span>
     </div>
     <button class="add-btn" id="import-btn">↓ 불러오기</button>
-    <button class="add-btn" id="new-kick-btn">+ 새 킥 만들기</button>
+    <button class="add-btn" id="new-kick-btn">+ 새 테이블 만들기</button>
   </div>
 
-  <div class="divider"></div>
+  <nav class="tab-bar">
+    <a class="tab"        href="library_mino.html">미노 팩</a>
+    <a class="tab active" href="library_kick.html">킥</a>
+  </nav>
 
-  <div id="kick-list"></div>
+  <div id="kick-list">
+
+    <div class="card active">
+      <div class="card-header">
+        <div class="card-header-left">
+          <span class="status-badge">사용중</span>
+          <span class="card-name">나만의 킥 테이블</span>
+        </div>
+        <div class="card-actions">
+          <img class="action-icon" src="img/copy.png"   alt="copy"   title="복사">
+          <img class="action-icon" src="img/pencil.png" alt="edit"   title="편집">
+          <img class="action-icon" src="img/delete.png" alt="delete" title="삭제">
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-info">
+          <span class="info-row"><span class="info-label">고유 코드: </span>123abcd</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
 
 </body>
 </html>

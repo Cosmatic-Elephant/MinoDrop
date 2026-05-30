@@ -77,10 +77,38 @@
       background: #357a52;
       border-color: #5abf7a;
     }
-    .divider {
+    /* ── Tab bar ── */
+    .tab-bar {
       width: 550px;
-      height: 1px;
-      background: #2a2a3e;
+      display: flex;
+      align-items: flex-end;
+      gap: 4px;
+      border-bottom: 1px solid #2a2a3e;
+    }
+    .tab {
+      padding: 8px 20px;
+      font: 13px monospace;
+      color: #555;
+      text-decoration: none;
+      border: 1px solid transparent;
+      border-bottom: none;
+      border-radius: 6px 6px 0 0;
+      transition: color 0.12s, background 0.12s, border-color 0.12s;
+      letter-spacing: 0.03em;
+    }
+    .tab:hover {
+      color: #999;
+      background: #16213e;
+      border-color: #2a2a3e;
+    }
+    .tab.active {
+      color: #fff;
+      background: #1a1a2e;
+      border-color: #2a2a3e;
+      border-bottom-color: #1a1a2e;
+      margin-bottom: -1px;
+      cursor: default;
+      pointer-events: none;
     }
 
     /* ── Card base ── */
@@ -381,7 +409,10 @@
     <button class="add-btn" id="new-pack-btn">+ 새 팩 만들기</button>
   </div>
 
-  <div class="divider"></div>
+  <nav class="tab-bar">
+    <a class="tab active" href="library_mino.html">미노 팩</a>
+    <a class="tab"        href="library_kick.html">킥</a>
+  </nav>
 
   <div id="pack-list"></div>
 
