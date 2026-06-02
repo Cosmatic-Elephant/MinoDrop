@@ -99,6 +99,18 @@
       gap: 24px;
     }
 
+    /* ── Section titles ── */
+    .panel-section {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .section-title {
+      font: bold 13px monospace;
+      color: #aaa;
+      letter-spacing: 0.06em;
+    }
+
     /* ── Grid canvas ── */
     #kick-grid {
       border: 2px solid #333;
@@ -155,6 +167,51 @@
     }
     #add-row-btn:hover { color: #aaa; border-color: #666; }
 
+    /* ── Combo row ── */
+    #combo-row {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+    .combo-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .combo-label {
+      font: bold 13px monospace;
+      color: #aaa;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+    }
+    .combo-select {
+      padding: 5px 8px;
+      font: 13px monospace;
+      background: #333;
+      color: #ccc;
+      border: 1px solid #555;
+      border-radius: 4px;
+      cursor: pointer;
+      outline: none;
+    }
+    .combo-select:focus { border-color: #777; }
+    .combo-select:disabled { opacity: 0.4; cursor: default; }
+    #add-mino-btn {
+      font: bold 13px monospace;
+      color: #aeffcb;
+      background: #2d7a4a;
+      border: 1px solid #3d9a5a;
+      border-radius: 6px;
+      padding: 8px 16px;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: background 0.12s, border-color 0.12s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    #add-mino-btn:hover { background: #357a52; border-color: #5abf7a; }
+    #add-mino-btn:disabled { opacity: 0.4; cursor: default; }
+
     /* ── Table ── */
     #kick-table {
       border-collapse: collapse;
@@ -190,8 +247,13 @@
     <div id="content-area">
 
       <div id="editor-row">
-        <canvas id="kick-grid"></canvas>
-        <div id="fields-col">
+        <div class="panel-section">
+          <span class="section-title">킥 테스트</span>
+          <canvas id="kick-grid"></canvas>
+        </div>
+        <div class="panel-section">
+          <span class="section-title">대응 미노</span>
+          <div id="fields-col">
           <div class="field-row">
             <input class="kick-input" type="text">
             <img class="action-icon" src="img/delete.png" alt="delete">
@@ -210,6 +272,19 @@
           </div>
           <button id="add-row-btn">+ 새 행 추가</button>
         </div>
+        </div>
+      </div>
+
+      <div id="combo-row">
+        <div class="combo-group">
+          <span class="combo-label">미노 팩</span>
+          <select id="pack-select" class="combo-select"></select>
+        </div>
+        <div class="combo-group">
+          <span class="combo-label">미노</span>
+          <select id="mino-select" class="combo-select"></select>
+        </div>
+        <button id="add-mino-btn">추가하기</button>
       </div>
 
       <table id="kick-table">
