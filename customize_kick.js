@@ -108,6 +108,89 @@ packSelect.addEventListener('change', syncMinoSelect);
 
 loadPackSelect();
 
+/* ── 킥 테이블 ── */
+const kickTable  = document.getElementById('kick-table');
+const addColBtn  = document.getElementById('add-col-btn');
+const MAX_COLS   = 11; // 라벨 열 포함 최대 열 수
+
+function tableColCount() {
+  return kickTable.querySelector('thead tr').cells.length;
+}
+
+function fillDefaultCells() {
+  kickTable.querySelectorAll('tbody td:not(:first-child)').forEach(td => {
+    if (td.textContent.trim() === '') td.textContent = '(0, 0)';
+  });
+}
+
+function syncAddColBtn() {
+  addColBtn.disabled = tableColCount() >= MAX_COLS;
+}
+
+addColBtn.addEventListener('click', () => {
+  if (tableColCount() >= MAX_COLS) return;
+  const offsetIndex = tableColCount() - 1;
+  const th = document.createElement('th');
+  th.textContent = `offset ${offsetIndex}`;
+  kickTable.querySelector('thead tr').appendChild(th);
+  kickTable.querySelectorAll('tbody tr').forEach(tr => {
+    const td = document.createElement('td');
+    td.textContent = '(0, 0)';
+    tr.appendChild(td);
+  });
+  syncAddColBtn();
+});
+
+fillDefaultCells();
+syncAddColBtn();
+
+/* ── 셀 인라인 편집 ── */
+function parseCoord(raw) {
+  const s = raw.trim();
+  const m = s.match(/^\(?\s*(-?\d+)\s*,\s*(-?\d+)\s*\)?$/);
+  if (!m) return null;
+  const hasParen = s.startsWith('(');
+  if (hasParen !== s.endsWith(')')) return null;
+  return `(${m[1]}, ${m[2]})`;
+}
+
+kickTable.addEventListener('click', e => {
+  const td = e.target.closest('td');
+  if (!td || !td.closest('tbody') || td.cellIndex === 0) return;
+  if (td.querySelector('.cell-input')) return;
+
+  const original = td.textContent;
+  td.textContent = '';
+
+  const input = document.createElement('input');
+  input.className = 'cell-input';
+  input.type = 'text';
+  input.value = original;
+  td.appendChild(input);
+  input.focus();
+  input.select();
+
+  let done = false;
+  function finish(value) {
+    if (done) return;
+    done = true;
+    td.textContent = value;
+  }
+
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      const parsed = parseCoord(input.value);
+      if (!parsed) { input.classList.add('invalid'); return; }
+      finish(parsed);
+    } else if (e.key === 'Escape') {
+      finish(original);
+    }
+  });
+
+  input.addEventListener('input', () => input.classList.remove('invalid'));
+  input.addEventListener('blur', () => finish(original));
+});
+
 /* ── 추가하기 버튼 ── */
 addMinoBtn.addEventListener('click', () => {
   const name = minoSelect.options[minoSelect.selectedIndex].text;
