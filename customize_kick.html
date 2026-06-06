@@ -251,6 +251,10 @@
       cursor: pointer;
       transition: color 0.12s, background 0.12s, border-color 0.12s;
       letter-spacing: 0.03em;
+      min-width: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
     .tab:hover {
       color: #999;
@@ -280,18 +284,33 @@
     }
     .tab-add-btn:hover { color: #aaa; background: #16213e; }
     .tab-close-btn {
-      margin-left: 6px;
       font-size: 14px;
       opacity: 0.4;
-      vertical-align: middle;
       transition: opacity 0.12s, color 0.12s;
+      flex-shrink: 0;
     }
     .tab:hover .tab-close-btn { opacity: 0.7; }
     .tab-close-btn:hover { opacity: 1 !important; color: #ff9999; }
+    .tab-name-input {
+      font: 13px monospace;
+      background: transparent;
+      color: #fff;
+      border: none;
+      border-bottom: 1px solid #6688cc;
+      outline: none;
+      padding: 0 2px;
+      width: 80px;
+      letter-spacing: 0.03em;
+    }
+    .tab-name-input.invalid {
+      border-bottom-color: #c04040;
+      color: #ff9999;
+    }
 
     #table-section {
       display: flex;
       flex-direction: column;
+      min-width: 500px;
     }
 
     /* ── Column delete bar ── */
@@ -331,6 +350,7 @@
     }
     #kick-table {
       border-collapse: collapse;
+      align-self: flex-start;
     }
     #kick-table th, #kick-table td {
       width: 72px;

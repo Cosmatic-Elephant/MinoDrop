@@ -1,4 +1,5 @@
 import { getPacks } from './src/data/packStore.js';
+import { getKickSets } from './src/data/kickStore.js';
 
 /* ── 이탈 방지 ── */
 let saving = false;
@@ -28,14 +29,12 @@ for (let r = 0; r < N; r++)
 /* ── 행 추가/삭제 ── */
 const fieldsCol = document.getElementById('fields-col');
 const addRowBtn = document.getElementById('add-row-btn');
-const MAX_ROWS  = 10;
-
 function rowCount() {
   return fieldsCol.querySelectorAll('.field-row').length;
 }
 
 function syncAddBtn() {
-  addRowBtn.style.display = rowCount() >= MAX_ROWS ? 'none' : '';
+  addRowBtn.style.display = '';
 }
 
 function makeRow() {
@@ -60,7 +59,6 @@ fieldsCol.addEventListener('click', e => {
 });
 
 addRowBtn.addEventListener('click', () => {
-  if (rowCount() >= MAX_ROWS) return;
   fieldsCol.insertBefore(makeRow(), addRowBtn);
   syncAddBtn();
   syncTableSelects();
@@ -261,8 +259,49 @@ function syncTableSelects() {
     const current = sel.value;
     sel.innerHTML = '';
     labels.forEach(label => sel.add(new Option(label, label)));
+    sel.add(new Option('없음', '없음'));
     if ([...sel.options].some(o => o.value === current)) sel.value = current;
   });
+}
+
+function startTabRename(tab) {
+  if (tab.querySelector('.tab-name-input')) return;
+
+  const textNode = tab.firstChild;
+  const original = textNode.textContent.trim();
+
+  const input = document.createElement('input');
+  input.className = 'tab-name-input';
+  input.type = 'text';
+  input.value = original;
+  textNode.replaceWith(input);
+  input.focus();
+  input.select();
+
+  let done = false;
+  function finish(newName) {
+    if (done) return;
+    done = true;
+    input.replaceWith(document.createTextNode(newName));
+    if (newName !== original) syncTableSelects();
+  }
+
+  input.addEventListener('keydown', ev => {
+    if (ev.key === 'Enter') {
+      const trimmed = input.value.trim();
+      if (!trimmed) { input.classList.add('invalid'); return; }
+      const isDup = [...kickTabBar.querySelectorAll('.tab')]
+        .filter(t => t !== tab)
+        .some(t => t.firstChild.textContent.trim() === trimmed);
+      if (isDup) { input.classList.add('invalid'); return; }
+      finish(trimmed);
+    } else if (ev.key === 'Escape') {
+      finish(original);
+    }
+  });
+
+  input.addEventListener('input', () => input.classList.remove('invalid'));
+  input.addEventListener('blur', () => finish(original));
 }
 
 kickTabBar.addEventListener('click', e => {
@@ -285,8 +324,13 @@ kickTabBar.addEventListener('click', e => {
   }
   const tab = e.target.closest('.tab');
   if (!tab) return;
+  if (tab.classList.contains('active')) {
+    startTabRename(tab);
+    return;
+  }
   kickTabBar.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   tab.classList.add('active');
+  if (currentKickSet) loadTabTable(currentKickSet);
 });
 
 addTabBtn.addEventListener('click', e => {
@@ -323,12 +367,124 @@ addMinoBtn.addEventListener('click', () => {
     emptyInput.value = name;
     emptyInput.closest('.field-row').querySelector('.table-select').value = activeTabName;
   } else {
-    if (rowCount() >= MAX_ROWS) return;
     const row = makeRow();
     fieldsCol.insertBefore(row, addRowBtn);
     row.querySelector('.kick-input').value = name;
-    syncAddBtn();
     syncTableSelects();
     row.querySelector('.table-select').value = activeTabName;
   }
 });
+
+/* ── 킥 데이터 로드 ── */
+
+// HTML tbody 행 순서 → offsets 객체 키 매핑
+const ROW_KEYS = [
+  '0->1', // 0→R
+  '1->2', // R→2
+  '2->3', // 2→L
+  '3->0', // L→0
+  '0->3', // 0→L
+  '3->2', // L→2
+  '2->1', // 2→R
+  '1->0', // R→0
+  '0->2', // 0→2
+  '1->3', // R→L
+  '2->0', // 2→0
+  '3->1', // L→R
+];
+
+let currentKickSet = null;
+
+function populateTable(tableData) {
+  const offsets = tableData.offsets ?? {};
+  const maxLen = Object.values(offsets).reduce((m, arr) => Math.max(m, arr.length), 1);
+  const targetCols = maxLen + 1; // 라벨 열 포함
+
+  let currentCols = tableColCount();
+
+  while (currentCols < targetCols) {
+    const th = document.createElement('th');
+    kickTable.querySelector('thead tr').appendChild(th);
+    kickTable.querySelectorAll('tbody tr').forEach(tr => {
+      tr.appendChild(document.createElement('td'));
+    });
+    const cell = document.createElement('div');
+    cell.className = 'col-del-cell';
+    cell.innerHTML = '<button class="col-del-btn" title="열 삭제">×</button>';
+    colDeleteBar.appendChild(cell);
+    currentCols++;
+  }
+
+  while (currentCols > targetCols) {
+    const headerRow = kickTable.querySelector('thead tr');
+    headerRow.deleteCell(headerRow.cells.length - 1);
+    kickTable.querySelectorAll('tbody tr').forEach(tr => tr.deleteCell(tr.cells.length - 1));
+    colDeleteBar.lastElementChild.remove();
+    currentCols--;
+  }
+
+  reindexOffsetHeaders();
+  syncAddColBtn();
+
+  kickTable.querySelectorAll('tbody tr').forEach((tr, rowIdx) => {
+    const rowOffsets = offsets[ROW_KEYS[rowIdx]] ?? [];
+    for (let colIdx = 1; colIdx < tr.cells.length; colIdx++) {
+      const off = rowOffsets[colIdx - 1];
+      tr.cells[colIdx].textContent = off ? `(${off[0]}, ${off[1]})` : '(0, 0)';
+    }
+  });
+}
+
+function loadTabTable(kickSet) {
+  const activeTabName = kickTabBar.querySelector('.tab.active')?.firstChild.textContent.trim();
+  if (!activeTabName) return;
+  const tableData = kickSet.tables.find(t => t.name === activeTabName);
+  if (!tableData) return;
+  populateTable(tableData);
+}
+
+(function loadFromSession() {
+  const raw = sessionStorage.getItem('midrop_editing_kick_idx');
+  if (raw === null) return;
+  const idx = parseInt(raw, 10);
+  if (!Number.isInteger(idx) || idx < 0) return;
+
+  let sets;
+  try { sets = getKickSets(); } catch { return; }
+  const kickSet = sets[idx];
+  if (!kickSet || !Array.isArray(kickSet.tables) || kickSet.tables.length === 0) return;
+  if (!kickSet.tables.every(t => typeof t.name === 'string' && t.offsets != null)) return;
+
+  currentKickSet = kickSet;
+
+  // 탭 빌드
+  kickTabBar.querySelectorAll('.tab').forEach(t => t.remove());
+  kickSet.tables.forEach((table, i) => {
+    const tab = document.createElement('button');
+    tab.className = 'tab' + (i === 0 ? ' active' : '');
+    tab.textContent = table.name;
+    const closeSpan = document.createElement('span');
+    closeSpan.className = 'tab-close-btn';
+    closeSpan.textContent = '×';
+    tab.appendChild(closeSpan);
+    kickTabBar.insertBefore(tab, addTabBtn);
+  });
+  tabCount = kickSet.tables.length;
+  syncAddTabBtn();
+
+  // fields-col 채우기
+  fieldsCol.querySelectorAll('.field-row').forEach(r => r.remove());
+  const mappings = Array.isArray(kickSet.minoMappings) ? kickSet.minoMappings : [];
+  const rowsToCreate = mappings.length > 0 ? mappings.length : 1;
+  for (let i = 0; i < rowsToCreate; i++) fieldsCol.insertBefore(makeRow(), addRowBtn);
+  syncAddBtn();
+  syncTableSelects(); // 옵션 채운 뒤 값 설정
+  fieldsCol.querySelectorAll('.field-row').forEach((row, i) => {
+    const m = mappings[i];
+    if (!m) return;
+    row.querySelector('.kick-input').value = m.minoName;
+    row.querySelector('.table-select').value = m.tableName;
+  });
+
+  loadTabTable(kickSet);
+})();
