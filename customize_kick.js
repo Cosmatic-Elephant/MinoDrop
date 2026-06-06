@@ -1,5 +1,5 @@
 import { getPacks } from './src/data/packStore.js';
-import { getKickSets } from './src/data/kickStore.js';
+import { getKickSets, saveKickSets } from './src/data/kickStore.js';
 
 /* ── 이탈 방지 ── */
 let saving = false;
@@ -282,6 +282,10 @@ function startTabRename(tab) {
   function finish(newName) {
     if (done) return;
     done = true;
+    if (newName !== original) {
+      const tableData = draftKickSet.tables.find(t => t.name === original);
+      if (tableData) tableData.name = newName;
+    }
     input.replaceWith(document.createTextNode(newName));
     if (newName !== original) syncTableSelects();
   }
@@ -310,13 +314,18 @@ kickTabBar.addEventListener('click', e => {
     if (kickTabBar.querySelectorAll('.tab').length <= 1) return;
     const tab = closeBtn.closest('.tab');
     const wasActive = tab.classList.contains('active');
+    const tabName = tab.firstChild.textContent.trim();
+    const draftIdx = draftKickSet.tables.findIndex(t => t.name === tabName);
+    if (draftIdx !== -1) draftKickSet.tables.splice(draftIdx, 1);
     const allTabs = [...kickTabBar.querySelectorAll('.tab')];
     const idx = allTabs.indexOf(tab);
     tab.remove();
     if (wasActive) {
       const remaining = [...kickTabBar.querySelectorAll('.tab')];
-      if (remaining.length > 0)
+      if (remaining.length > 0) {
         remaining[Math.min(idx, remaining.length - 1)].classList.add('active');
+        loadTabTable();
+      }
     }
     syncAddTabBtn();
     syncTableSelects();
@@ -328,22 +337,27 @@ kickTabBar.addEventListener('click', e => {
     startTabRename(tab);
     return;
   }
+  flushCurrentTabToDraft();
   kickTabBar.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   tab.classList.add('active');
-  if (currentKickSet) loadTabTable(currentKickSet);
+  loadTabTable();
 });
 
 addTabBtn.addEventListener('click', e => {
   e.stopPropagation();
+  flushCurrentTabToDraft();
   tabCount++;
+  const newName = `테이블 ${tabCount}`;
+  draftKickSet.tables.push({ name: newName, offsets: {} });
   const tab = document.createElement('button');
   tab.className = 'tab';
-  tab.innerHTML = `테이블 ${tabCount}<span class="tab-close-btn">×</span>`;
+  tab.innerHTML = `${newName}<span class="tab-close-btn">×</span>`;
   kickTabBar.insertBefore(tab, addTabBtn);
   kickTabBar.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   tab.classList.add('active');
   syncAddTabBtn();
   syncTableSelects();
+  loadTabTable();
 });
 
 syncTableSelects();
@@ -377,44 +391,93 @@ addMinoBtn.addEventListener('click', () => {
 
 /* ── 킥 데이터 로드 ── */
 
-// HTML tbody 행 순서 → offsets 객체 키 매핑
 const ROW_KEYS = [
-  '0->1', // 0→R
-  '1->2', // R→2
-  '2->3', // 2→L
-  '3->0', // L→0
-  '0->3', // 0→L
-  '3->2', // L→2
-  '2->1', // 2→R
-  '1->0', // R→0
-  '0->2', // 0→2
-  '1->3', // R→L
-  '2->0', // 2→0
-  '3->1', // L→R
+  '0->1', '1->2', '2->3', '3->0',
+  '0->3', '3->2', '2->1', '1->0',
+  '0->2', '1->3', '2->0', '3->1',
 ];
 
-let currentKickSet = null;
+const _initTabName = kickTabBar.querySelector('.tab.active')?.firstChild?.textContent?.trim() ?? '테이블 1';
+let draftKickSet = {
+  formatVersion: 1,
+  name: '',
+  tables: [{ name: _initTabName, offsets: {} }],
+  minoMappings: []
+};
+
+// 현재 활성 탭 DOM 내용을 draftKickSet에 반영
+function flushCurrentTabToDraft() {
+  const activeTab = kickTabBar.querySelector('.tab.active');
+  if (!activeTab) return;
+  const activeTabName = activeTab.firstChild.textContent.trim();
+  const tableData = draftKickSet.tables.find(t => t.name === activeTabName);
+  if (!tableData) return;
+  const newOffsets = {};
+  kickTable.querySelectorAll('tbody tr').forEach((tr, rowIdx) => {
+    const rowKey = ROW_KEYS[rowIdx];
+    const values = [];
+    for (let colIdx = 1; colIdx < tr.cells.length; colIdx++) {
+      const text = tr.cells[colIdx].textContent.trim();
+      const m = text.match(/^\(\s*(-?\d+)\s*,\s*(-?\d+)\s*\)$/);
+      values.push(m ? [parseInt(m[1], 10), parseInt(m[2], 10)] : [0, 0]);
+    }
+    if (values.length > 0) newOffsets[rowKey] = values;
+  });
+  tableData.offsets = newOffsets;
+}
+
+// 현재 UI의 minoMappings을 draftKickSet에 반영
+function flushMappingsToDraft() {
+  const mappings = [];
+  fieldsCol.querySelectorAll('.field-row').forEach(row => {
+    const name = row.querySelector('.kick-input').value.trim();
+    const tableName = row.querySelector('.table-select').value;
+    if (name) mappings.push({ minoName: name, tableName });
+  });
+  draftKickSet.minoMappings = mappings;
+}
+
+// 행 배열에서 최초 (0,0) 이후의 (0,0) 제거
+function washRow(arr) {
+  const firstZeroIdx = arr.findIndex(([x, y]) => x === 0 && y === 0);
+  if (firstZeroIdx === -1) return arr;
+  return arr.filter((v, i) => i <= firstZeroIdx || !(v[0] === 0 && v[1] === 0));
+}
+
+// 저장 전 워싱: 행별 후행 (0,0) 제거 + 미사용 전체-(0,0) 테이블 제거
+function washKickSet(kickSet) {
+  const result = JSON.parse(JSON.stringify(kickSet));
+  result.tables.forEach(table => {
+    Object.keys(table.offsets).forEach(key => {
+      table.offsets[key] = washRow(table.offsets[key]);
+    });
+  });
+  const mappedNames = new Set(result.minoMappings.map(m => m.tableName));
+  result.tables = result.tables.filter(table => {
+    if (mappedNames.has(table.name)) return true;
+    const allZero = Object.values(table.offsets).every(arr =>
+      arr.every(([x, y]) => x === 0 && y === 0)
+    );
+    return !allZero;
+  });
+  return result;
+}
 
 function populateTable(tableData) {
   const offsets = tableData.offsets ?? {};
   const maxLen = Object.values(offsets).reduce((m, arr) => Math.max(m, arr.length), 1);
-  const targetCols = maxLen + 1; // 라벨 열 포함
-
+  const targetCols = maxLen + 1;
   let currentCols = tableColCount();
-
   while (currentCols < targetCols) {
     const th = document.createElement('th');
     kickTable.querySelector('thead tr').appendChild(th);
-    kickTable.querySelectorAll('tbody tr').forEach(tr => {
-      tr.appendChild(document.createElement('td'));
-    });
+    kickTable.querySelectorAll('tbody tr').forEach(tr => tr.appendChild(document.createElement('td')));
     const cell = document.createElement('div');
     cell.className = 'col-del-cell';
     cell.innerHTML = '<button class="col-del-btn" title="열 삭제">×</button>';
     colDeleteBar.appendChild(cell);
     currentCols++;
   }
-
   while (currentCols > targetCols) {
     const headerRow = kickTable.querySelector('thead tr');
     headerRow.deleteCell(headerRow.cells.length - 1);
@@ -422,10 +485,8 @@ function populateTable(tableData) {
     colDeleteBar.lastElementChild.remove();
     currentCols--;
   }
-
   reindexOffsetHeaders();
   syncAddColBtn();
-
   kickTable.querySelectorAll('tbody tr').forEach((tr, rowIdx) => {
     const rowOffsets = offsets[ROW_KEYS[rowIdx]] ?? [];
     for (let colIdx = 1; colIdx < tr.cells.length; colIdx++) {
@@ -435,12 +496,12 @@ function populateTable(tableData) {
   });
 }
 
-function loadTabTable(kickSet) {
+// draftKickSet에서 활성 탭 데이터를 읽어 테이블을 갱신
+function loadTabTable() {
   const activeTabName = kickTabBar.querySelector('.tab.active')?.firstChild.textContent.trim();
   if (!activeTabName) return;
-  const tableData = kickSet.tables.find(t => t.name === activeTabName);
-  if (!tableData) return;
-  populateTable(tableData);
+  const tableData = draftKickSet.tables.find(t => t.name === activeTabName);
+  populateTable(tableData ?? { name: activeTabName, offsets: {} });
 }
 
 (function loadFromSession() {
@@ -448,16 +509,14 @@ function loadTabTable(kickSet) {
   if (raw === null) return;
   const idx = parseInt(raw, 10);
   if (!Number.isInteger(idx) || idx < 0) return;
-
   let sets;
   try { sets = getKickSets(); } catch { return; }
   const kickSet = sets[idx];
   if (!kickSet || !Array.isArray(kickSet.tables) || kickSet.tables.length === 0) return;
   if (!kickSet.tables.every(t => typeof t.name === 'string' && t.offsets != null)) return;
 
-  currentKickSet = kickSet;
+  draftKickSet = JSON.parse(JSON.stringify(kickSet));
 
-  // 탭 빌드
   kickTabBar.querySelectorAll('.tab').forEach(t => t.remove());
   kickSet.tables.forEach((table, i) => {
     const tab = document.createElement('button');
@@ -472,13 +531,12 @@ function loadTabTable(kickSet) {
   tabCount = kickSet.tables.length;
   syncAddTabBtn();
 
-  // fields-col 채우기
   fieldsCol.querySelectorAll('.field-row').forEach(r => r.remove());
   const mappings = Array.isArray(kickSet.minoMappings) ? kickSet.minoMappings : [];
   const rowsToCreate = mappings.length > 0 ? mappings.length : 1;
   for (let i = 0; i < rowsToCreate; i++) fieldsCol.insertBefore(makeRow(), addRowBtn);
   syncAddBtn();
-  syncTableSelects(); // 옵션 채운 뒤 값 설정
+  syncTableSelects();
   fieldsCol.querySelectorAll('.field-row').forEach((row, i) => {
     const m = mappings[i];
     if (!m) return;
@@ -486,5 +544,21 @@ function loadTabTable(kickSet) {
     row.querySelector('.table-select').value = m.tableName;
   });
 
-  loadTabTable(kickSet);
+  loadTabTable();
 })();
+
+/* ── 저장 ── */
+document.querySelector('.save-btn').addEventListener('click', () => {
+  const raw = sessionStorage.getItem('midrop_editing_kick_idx');
+  const idx = raw !== null ? parseInt(raw, 10) : -1;
+  let sets;
+  try { sets = getKickSets(); } catch { sets = []; }
+  if (idx >= 0 && idx < sets.length) {
+    flushCurrentTabToDraft();
+    flushMappingsToDraft();
+    sets[idx] = washKickSet(draftKickSet);
+    saveKickSets(sets);
+  }
+  saving = true;
+  location.href = 'library_kick.html';
+});
