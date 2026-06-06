@@ -212,7 +212,118 @@
     #add-mino-btn:hover { background: #357a52; border-color: #5abf7a; }
     #add-mino-btn:disabled { opacity: 0.4; cursor: default; }
 
+    /* ── Mirror row ── */
+    #mirror-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .mirror-btn {
+      font: bold 13px monospace;
+      color: #aeffcb;
+      background: #2d7a4a;
+      border: 1px solid #3d9a5a;
+      border-radius: 6px;
+      padding: 8px 16px;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: background 0.12s, border-color 0.12s;
+      white-space: nowrap;
+    }
+    .mirror-btn:hover { background: #357a52; border-color: #5abf7a; }
+
+    /* ── Tab bar ── */
+    .tab-bar {
+      display: flex;
+      align-items: flex-end;
+      gap: 4px;
+      border-bottom: 1px solid #2a2a3e;
+      align-self: stretch;
+    }
+    .tab {
+      padding: 7px 16px;
+      font: 13px monospace;
+      color: #555;
+      background: transparent;
+      border: 1px solid transparent;
+      border-bottom: none;
+      border-radius: 6px 6px 0 0;
+      cursor: pointer;
+      transition: color 0.12s, background 0.12s, border-color 0.12s;
+      letter-spacing: 0.03em;
+    }
+    .tab:hover {
+      color: #999;
+      background: #16213e;
+      border-color: #2a2a3e;
+    }
+    .tab.active {
+      color: #fff;
+      background: #1a1a2e;
+      border-color: #2a2a3e;
+      border-bottom-color: #1a1a2e;
+      margin-bottom: -1px;
+      cursor: default;
+    }
+    .tab-add-btn {
+      padding: 4px 8px;
+      font: bold 16px monospace;
+      color: #555;
+      background: transparent;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      align-self: center;
+      margin-bottom: 6px;
+      line-height: 1;
+      transition: color 0.12s, background 0.12s;
+    }
+    .tab-add-btn:hover { color: #aaa; background: #16213e; }
+    .tab-close-btn {
+      margin-left: 6px;
+      font-size: 14px;
+      opacity: 0.4;
+      vertical-align: middle;
+      transition: opacity 0.12s, color 0.12s;
+    }
+    .tab:hover .tab-close-btn { opacity: 0.7; }
+    .tab-close-btn:hover { opacity: 1 !important; color: #ff9999; }
+
+    #table-section {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Column delete bar ── */
+    #col-delete-bar {
+      display: table;
+      border-collapse: collapse;
+    }
+    .col-del-cell {
+      display: table-cell;
+      width: 72px;
+      height: 30px;
+      text-align: center;
+      vertical-align: middle;
+    }
+    .col-del-btn {
+      font: bold 13px monospace;
+      color: #555;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      padding: 2px 8px;
+      border-radius: 3px;
+      line-height: 1;
+      transition: color 0.12s, background 0.12s;
+    }
+    .col-del-btn:hover { color: #ff8888; background: #3a1515; }
+
     /* ── Table ── */
+    #table-col {
+      display: flex;
+      flex-direction: column;
+    }
     #table-wrapper {
       display: flex;
       align-items: stretch;
@@ -286,7 +397,8 @@
     #add-col-btn:disabled { opacity: 0.3; cursor: default; }
     /* 호버 강조 */
     #kick-table th:hover,
-    #kick-table td:hover {
+    #kick-table td:hover,
+    #kick-table .cell-highlight {
       background: #2e4a80 !important;
     }
   </style>
@@ -320,18 +432,22 @@
           <div id="fields-col">
           <div class="field-row">
             <input class="kick-input" type="text">
+            <select class="table-select combo-select"></select>
             <img class="action-icon" src="img/delete.png" alt="delete">
           </div>
           <div class="field-row">
             <input class="kick-input" type="text">
+            <select class="table-select combo-select"></select>
             <img class="action-icon" src="img/delete.png" alt="delete">
           </div>
           <div class="field-row">
             <input class="kick-input" type="text">
+            <select class="table-select combo-select"></select>
             <img class="action-icon" src="img/delete.png" alt="delete">
           </div>
           <div class="field-row">
             <input class="kick-input" type="text">
+            <select class="table-select combo-select"></select>
             <img class="action-icon" src="img/delete.png" alt="delete">
           </div>
           <button id="add-row-btn">+ 새 행 추가</button>
@@ -351,37 +467,59 @@
         <button id="add-mino-btn">추가하기</button>
       </div>
 
+      <div id="mirror-row">
+        <button class="mirror-btn" id="btn-cw-ccw-mirror">시계 -&gt; 반시계 미러링</button>
+        <button class="mirror-btn" id="btn-lr-mirror">좌우 미러링</button>
+        <button class="mirror-btn" id="btn-tb-mirror">상하 미러링</button>
+      </div>
+
+      <div id="table-section">
+      <nav class="tab-bar" id="kick-tab-bar">
+        <button class="tab active">테이블 1<span class="tab-close-btn">×</span></button>
+        <button class="tab-add-btn" id="add-tab-btn" title="탭 추가">+</button>
+      </nav>
       <div id="table-wrapper">
-        <table id="kick-table">
-          <thead>
-            <tr>
-              <th></th>
-              <th>offset 0</th>
-              <th>offset 1</th>
-              <th>offset 2</th>
-              <th>offset 3</th>
-              <th>offset 4</th>
-            </tr>
-          </thead>
-          <tbody>
-            <!-- 오른쪽 회전 (CW) -->
-            <tr><td>0→R</td><td></td><td></td><td></td><td></td><td></td></tr>
-            <tr><td>R→2</td><td></td><td></td><td></td><td></td><td></td></tr>
-            <tr><td>2→L</td><td></td><td></td><td></td><td></td><td></td></tr>
-            <tr><td>L→0</td><td></td><td></td><td></td><td></td><td></td></tr>
-            <!-- 왼쪽 회전 (CCW) -->
-            <tr><td>0→L</td><td></td><td></td><td></td><td></td><td></td></tr>
-            <tr><td>L→2</td><td></td><td></td><td></td><td></td><td></td></tr>
-            <tr><td>2→R</td><td></td><td></td><td></td><td></td><td></td></tr>
-            <tr><td>R→0</td><td></td><td></td><td></td><td></td><td></td></tr>
-            <!-- 180도 회전 -->
-            <tr><td>0→2</td><td></td><td></td><td></td><td></td><td></td></tr>
-            <tr><td>R→L</td><td></td><td></td><td></td><td></td><td></td></tr>
-            <tr><td>2→0</td><td></td><td></td><td></td><td></td><td></td></tr>
-            <tr><td>L→R</td><td></td><td></td><td></td><td></td><td></td></tr>
-          </tbody>
-        </table>
+        <div id="table-col">
+          <table id="kick-table">
+            <thead>
+              <tr>
+                <th></th>
+                <th>offset 0</th>
+                <th>offset 1</th>
+                <th>offset 2</th>
+                <th>offset 3</th>
+                <th>offset 4</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- 오른쪽 회전 (CW) -->
+              <tr><td>0→R</td><td></td><td></td><td></td><td></td><td></td></tr>
+              <tr><td>R→2</td><td></td><td></td><td></td><td></td><td></td></tr>
+              <tr><td>2→L</td><td></td><td></td><td></td><td></td><td></td></tr>
+              <tr><td>L→0</td><td></td><td></td><td></td><td></td><td></td></tr>
+              <!-- 왼쪽 회전 (CCW) -->
+              <tr><td>0→L</td><td></td><td></td><td></td><td></td><td></td></tr>
+              <tr><td>L→2</td><td></td><td></td><td></td><td></td><td></td></tr>
+              <tr><td>2→R</td><td></td><td></td><td></td><td></td><td></td></tr>
+              <tr><td>R→0</td><td></td><td></td><td></td><td></td><td></td></tr>
+              <!-- 180도 회전 -->
+              <tr><td>0→2</td><td></td><td></td><td></td><td></td><td></td></tr>
+              <tr><td>R→L</td><td></td><td></td><td></td><td></td><td></td></tr>
+              <tr><td>2→0</td><td></td><td></td><td></td><td></td><td></td></tr>
+              <tr><td>L→R</td><td></td><td></td><td></td><td></td><td></td></tr>
+            </tbody>
+          </table>
+          <div id="col-delete-bar">
+            <div class="col-del-cell"></div>
+            <div class="col-del-cell"><button class="col-del-btn" title="열 삭제">×</button></div>
+            <div class="col-del-cell"><button class="col-del-btn" title="열 삭제">×</button></div>
+            <div class="col-del-cell"><button class="col-del-btn" title="열 삭제">×</button></div>
+            <div class="col-del-cell"><button class="col-del-btn" title="열 삭제">×</button></div>
+            <div class="col-del-cell"><button class="col-del-btn" title="열 삭제">×</button></div>
+          </div>
+        </div>
         <button id="add-col-btn" title="열 추가">+</button>
+      </div>
       </div>
 
     </div>
