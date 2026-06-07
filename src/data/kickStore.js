@@ -32,49 +32,70 @@ export function saveKickSets(sets) {
 }
 
 export function encodeKick(kickSet) {
-  const payload = {
-    formatVersion: kickSet.formatVersion,
-    name: kickSet.name,
-    tables: kickSet.tables,
-    minoMappings: kickSet.minoMappings
-  };
-  const json = JSON.stringify(payload);
-  const bytes = new TextEncoder().encode(json);
-  const binary = Array.from(bytes, b => String.fromCharCode(b)).join('');
-  const b64 = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-  return `v${payload.formatVersion}_${b64}`;
+  const tables = kickSet.tables.map(t => {
+    const safeName = t.name.replace(/[~|@]/g, '_');
+    const transitions = Object.entries(t.offsets).map(([key, pairs]) => {
+      const compactKey = key.replace('->', '');
+      const pairsStr = pairs.map(([x, y]) => `${x},${y}`).join(';');
+      return `${compactKey}:${pairsStr}`;
+    }).join('@');
+    return transitions ? `${safeName}@${transitions}` : safeName;
+  }).join('|');
+
+  const mappings = kickSet.minoMappings.map(m => {
+    const idx = kickSet.tables.findIndex(t => t.name === m.tableName);
+    const safeMino = m.minoName.replace(/[~|,:]/g, '_');
+    return `${safeMino}:${idx === -1 ? '-' : idx}`;
+  }).join(',');
+
+  const safeName = kickSet.name.replace(/~/g, '_');
+  return `v2k~${safeName}~${tables}~${mappings}`;
 }
 
 export function decodeKick(code) {
-  const match = code.match(/^v(\d+)_([A-Za-z0-9\-_]+)$/);
-  if (!match) throw new Error('유효하지 않은 코드 형식입니다.');
+  if (!code.startsWith('v2k~')) throw new Error('유효하지 않은 코드 형식입니다.');
 
-  const version = parseInt(match[1], 10);
-  if (version !== 1) throw new Error(`지원하지 않는 버전입니다: v${version}`);
+  const afterPrefix = code.slice(4);
+  const tilde1 = afterPrefix.indexOf('~');
+  if (tilde1 === -1) throw new Error('코드 구조가 올바르지 않습니다.');
+  const tilde2 = afterPrefix.indexOf('~', tilde1 + 1);
+  if (tilde2 === -1) throw new Error('코드 구조가 올바르지 않습니다.');
 
-  let json;
-  try {
-    const b64 = match[2].replace(/-/g, '+').replace(/_/g, '/');
-    const binary = atob(b64);
-    const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
-    json = new TextDecoder().decode(bytes);
-  } catch {
-    throw new Error('코드 디코딩에 실패했습니다.');
-  }
+  const name = afterPrefix.slice(0, tilde1);
+  const tablesStr = afterPrefix.slice(tilde1 + 1, tilde2);
+  const mappingsStr = afterPrefix.slice(tilde2 + 1);
+  if (!name) throw new Error('코드 구조가 올바르지 않습니다.');
 
-  let payload;
-  try {
-    payload = JSON.parse(json);
-  } catch {
-    throw new Error('코드 파싱에 실패했습니다.');
-  }
+  const tables = tablesStr ? tablesStr.split('|').map(s => {
+    const atIdx = s.indexOf('@');
+    const tableName = atIdx === -1 ? s : s.slice(0, atIdx);
+    const transitionsStr = atIdx === -1 ? '' : s.slice(atIdx + 1);
+    const offsets = {};
+    if (transitionsStr) {
+      transitionsStr.split('@').forEach(t => {
+        const colonIdx = t.indexOf(':');
+        if (colonIdx === -1) return;
+        const compactKey = t.slice(0, colonIdx);
+        const fullKey = `${compactKey[0]}->${compactKey[1]}`;
+        offsets[fullKey] = t.slice(colonIdx + 1).split(';').map(p => {
+          const [x, y] = p.split(',').map(Number);
+          return [x, y];
+        });
+      });
+    }
+    return { name: tableName, offsets };
+  }) : [];
 
-  const { formatVersion, name, tables, minoMappings } = payload;
-  if (typeof formatVersion !== 'number' || typeof name !== 'string' || !Array.isArray(tables) || !Array.isArray(minoMappings)) {
-    throw new Error('코드 구조가 올바르지 않습니다.');
-  }
+  const minoMappings = mappingsStr ? mappingsStr.split(',').map(s => {
+    const colonIdx = s.indexOf(':');
+    if (colonIdx === -1) throw new Error('코드 구조가 올바르지 않습니다.');
+    const minoName = s.slice(0, colonIdx);
+    const idxStr = s.slice(colonIdx + 1);
+    const tableName = idxStr === '-' ? '없음' : (tables[parseInt(idxStr, 10)]?.name ?? '없음');
+    return { minoName, tableName };
+  }) : [];
 
-  return { formatVersion, name, code, tables, minoMappings };
+  return { formatVersion: 2, name, tables, minoMappings, code };
 }
 
 // '없음' 선택 또는 매핑 없음 → [[0,0]] (회전은 가능, 킥 없음)

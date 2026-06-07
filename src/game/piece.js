@@ -1,5 +1,5 @@
 import { SHAPES, COLORS, TYPES } from '../data/pieces.js';
-import { KICK_TABLE_MAP } from '../data/kicks.js';
+import { resolveKicks } from '../data/kickStore.js';
 import { GAME_FIELD } from './config.js';
 
 export class Piece {
@@ -56,11 +56,8 @@ export class Piece {
     this.rotState = (this.rotState + 2) % 4;
   }
 
-  // Returns SRS kick offsets (board coords, y-down) for the given state transition.
   getKicks(fromState, toState) {
-    const table = KICK_TABLE_MAP[this.type];
-    if (table == null) return [[0, 0]]; // undefined = unregistered custom piece, rotate in place
-    return table[`${fromState}->${toState}`] ?? [[0, 0]];
+    return resolveKicks(this.type, fromState, toState);
   }
 
   clone() {

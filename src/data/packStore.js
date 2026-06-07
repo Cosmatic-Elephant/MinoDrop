@@ -32,53 +32,58 @@ export function savePacks(packs) {
 }
 
 export function encodePack(pack) {
-  const payload = {
-    formatVersion: pack.formatVersion,
-    name: pack.name,
-    minos: pack.minos.map(({ name, color, shape }) => ({ name, color, shape }))
-  };
-  const json = JSON.stringify(payload);
-  const bytes = new TextEncoder().encode(json);
-  const binary = Array.from(bytes, b => String.fromCharCode(b)).join('');
-  const b64 = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-  return `v${payload.formatVersion}_${b64}`;
+  const minos = pack.minos.map(m => {
+    const cols = m.shape[0]?.length ?? 0;
+    const rowHex = m.shape.map(row =>
+      row.reduce((acc, v, i) => acc | (v << (cols - 1 - i)), 0).toString(16)
+    ).join('.');
+    const safeName = m.name.replace(/[~|,]/g, '_');
+    return `${safeName},${m.color},${m.shape.length}x${cols},${rowHex}`;
+  }).join('|');
+  const safeName = pack.name.replace(/~/g, '_');
+  return `v2p~${safeName}~${minos}`;
 }
 
 export function decodePack(code) {
-  const match = code.match(/^v(\d+)_([A-Za-z0-9\-_]+)$/);
-  if (!match) throw new Error('유효하지 않은 코드 형식입니다.');
+  if (!code.startsWith('v2p~')) throw new Error('유효하지 않은 코드 형식입니다.');
 
-  const version = parseInt(match[1], 10);
-  if (version !== 1) throw new Error(`지원하지 않는 버전입니다: v${version}`);
+  const afterPrefix = code.slice(4);
+  const tildeIdx = afterPrefix.indexOf('~');
+  if (tildeIdx === -1) throw new Error('코드 구조가 올바르지 않습니다.');
 
-  let json;
-  try {
-    const b64 = match[2].replace(/-/g, '+').replace(/_/g, '/');
-    const binary = atob(b64);
-    const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
-    json = new TextDecoder().decode(bytes);
-  } catch {
-    throw new Error('코드 디코딩에 실패했습니다.');
-  }
+  const name = afterPrefix.slice(0, tildeIdx);
+  const minosStr = afterPrefix.slice(tildeIdx + 1);
+  if (!name) throw new Error('코드 구조가 올바르지 않습니다.');
 
-  let payload;
-  try {
-    payload = JSON.parse(json);
-  } catch {
-    throw new Error('코드 파싱에 실패했습니다.');
-  }
+  const minos = minosStr ? minosStr.split('|').map(s => {
+    const first = s.indexOf(',');
+    const second = s.indexOf(',', first + 1);
+    const third = s.indexOf(',', second + 1);
+    if (first === -1 || second === -1 || third === -1) throw new Error('코드 구조가 올바르지 않습니다.');
 
-  const { formatVersion, name, minos } = payload;
-  if (typeof formatVersion !== 'number' || typeof name !== 'string' || !Array.isArray(minos)) {
-    throw new Error('코드 구조가 올바르지 않습니다.');
-  }
+    const minoName = s.slice(0, first);
+    const color = s.slice(first + 1, second);
+    const dims = s.slice(second + 1, third);
+    const rowsStr = s.slice(third + 1);
+
+    const xIdx = dims.indexOf('x');
+    if (xIdx === -1) throw new Error('코드 구조가 올바르지 않습니다.');
+    const rows = parseInt(dims.slice(0, xIdx), 10);
+    const cols = parseInt(dims.slice(xIdx + 1), 10);
+
+    const shape = rows === 0 ? [] : rowsStr.split('.').map(hex => {
+      const n = parseInt(hex, 16);
+      return Array.from({ length: cols }, (_, i) => (n >> (cols - 1 - i)) & 1);
+    });
+    return { name: minoName, color, shape };
+  }) : [];
 
   return {
-    formatVersion,
+    formatVersion: 2,
     name,
     code,
     thumbnail: 0,
-    size: Math.max(...minos.map(m => m.shape.length)),
+    size: minos.length > 0 ? Math.max(...minos.map(m => m.shape.length)) : 0,
     minoCount: minos.length,
     minos
   };

@@ -201,6 +201,10 @@ function renderList() {
     });
 
     card.querySelector('.action-icon[title="삭제"]').addEventListener('click', () => {
+      if (getPacks().length <= 1) {
+        showToast('마지막 미노 팩은 삭제할 수 없습니다.');
+        return;
+      }
       showConfirm(() => {
         const packs = getPacks();
         const idx = packs.findIndex(p => p.code === pack.code);

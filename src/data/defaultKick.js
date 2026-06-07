@@ -2,7 +2,7 @@
 // Key format: '${fromState}->${toState}'  (0=spawn, 1=CW, 2=180, 3=CCW)
 
 export const DEFAULT_KICK = {
-  formatVersion: 1,
+  formatVersion: 2,
   name: "SRS 킥 테이블",
   code: "srstable",
   tables: [

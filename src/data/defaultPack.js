@@ -1,5 +1,5 @@
 export const DEFAULT_PACK = {
-  formatVersion: 1,
+  formatVersion: 2,
   name: "기본 미노 팩",
   code: "tetromino",
   thumbnail: 0,

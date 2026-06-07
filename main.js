@@ -6,6 +6,7 @@ import { Keyboard } from './src/input/keyboard.js';
 import { GameSettings } from './src/settings.js';
 import { makeRng } from './src/rng.js';
 import { getActivePack, getPacks, getActiveIndex, setActivePack } from './src/data/packStore.js';
+import { getActiveKickSet, getKickSets, getActiveKickIndex, setActiveKickSet } from './src/data/kickStore.js';
 import { refreshPack } from './src/data/pieces.js';
 
 let settings = GameSettings.load();
@@ -65,7 +66,7 @@ function validateInput({ el, min, max }) {
 function updatePackInfo() {
   const pack = getActivePack();
   activePackInfoEl.textContent = `미노 팩 - ${pack.name}`;
-  activeKickInfoEl.textContent = `킥테이블 - ${kickSelect?.value ?? 'SRS'}`;
+  activeKickInfoEl.textContent = `킥테이블 - ${getActiveKickSet().name}`;
   const packSize = pack.minos?.length
     ? Math.max(...pack.minos.map(m => m.shape.length))
     : (pack.size ?? 0);
@@ -120,6 +121,15 @@ function openSettings() {
     });
     packSelect.value = String(getActiveIndex());
   }
+
+  kickSelect.innerHTML = '';
+  getKickSets().forEach((set, i) => {
+    const opt = document.createElement('option');
+    opt.value = String(i);
+    opt.textContent = set.name;
+    kickSelect.appendChild(opt);
+  });
+  kickSelect.value = String(getActiveKickIndex());
 
   inputCols.value = settings.COLS;
   inputRows.value = settings.ROWS;
@@ -329,6 +339,8 @@ function applySettings() {
   settings.save();
   const packIdx = parseInt(packSelect.value, 10);
   if (packIdx >= 0) { setActivePack(packIdx); refreshPack(); }
+  const kickIdx = parseInt(kickSelect.value, 10);
+  if (kickIdx >= 0) setActiveKickSet(kickIdx);
   kb.setPrevent(Object.values(settings.KEYBINDS));
   renderer.ghostWhite = settings.GHOST_WHITE;
   renderer.ghostStyle = settings.GHOST_STYLE;
@@ -336,6 +348,7 @@ function applySettings() {
   updatePackInfo();
   if (!gameStarted) {
     setGameField(settings.COLS, settings.ROWS);
+    board.reset();
     renderer.resize();
   }
 }
