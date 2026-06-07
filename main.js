@@ -10,6 +10,9 @@ import { getActiveKickSet, getKickSets, getActiveKickIndex, setActiveKickSet } f
 import { refreshPack } from './src/data/pieces.js';
 
 let settings = GameSettings.load();
+setGameField(settings.COLS, settings.ROWS);
+settings.COLS = GAME_FIELD.COLS;
+settings.ROWS = GAME_FIELD.ROWS;
 
 const canvas      = document.getElementById('game');
 const holdCanvas  = document.getElementById('hold');
