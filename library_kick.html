@@ -231,6 +231,163 @@
       flex: 1;
       padding-bottom: 32px;
     }
+
+    /* ── Confirm dialog ── */
+    #confirm-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    #confirm-overlay.visible { display: flex; }
+    #confirm-dialog {
+      background: #16213e;
+      border: 1px solid #444;
+      border-radius: 10px;
+      padding: 28px 32px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+      min-width: 300px;
+    }
+    #confirm-msg {
+      font: 15px monospace;
+      color: #ccc;
+      text-align: center;
+      line-height: 1.7;
+      letter-spacing: 0.03em;
+    }
+    #confirm-btns { display: flex; gap: 12px; }
+    #btn-cancel {
+      font: bold 13px monospace;
+      color: #aaa;
+      background: #252535;
+      border: 1px solid #444;
+      border-radius: 6px;
+      padding: 8px 20px;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: background 0.12s;
+    }
+    #btn-cancel:hover { background: #303045; }
+    #btn-delete {
+      font: bold 13px monospace;
+      color: #ffaaaa;
+      background: #5a2020;
+      border: 1px solid #7a3030;
+      border-radius: 6px;
+      padding: 8px 20px;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: background 0.12s;
+    }
+    #btn-delete:hover { background: #6a2828; }
+
+    /* ── Toast ── */
+    #toast {
+      display: none;
+      position: fixed;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #16213e;
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 12px 24px;
+      font: 14px monospace;
+      color: #ccc;
+      letter-spacing: 0.03em;
+      z-index: 200;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+    #toast.visible { display: block; }
+
+    /* ── Import dialog ── */
+    #import-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    #import-overlay.visible { display: flex; }
+    #import-dialog {
+      background: #16213e;
+      border: 1px solid #444;
+      border-radius: 10px;
+      padding: 28px 32px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      min-width: 360px;
+    }
+    #import-msg {
+      font: 15px monospace;
+      color: #ccc;
+      text-align: center;
+      line-height: 1.7;
+      letter-spacing: 0.03em;
+    }
+    #import-input {
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid #555;
+      border-radius: 6px;
+      padding: 9px 12px;
+      font: 14px monospace;
+      color: #fff;
+      letter-spacing: 0.03em;
+      outline: none;
+      transition: border-color 0.12s;
+    }
+    #import-input:focus { border-color: #3d9a5a; }
+    #import-input.invalid { border-color: #c04040; background: #2a1515; }
+    #import-input.invalid:focus { border-color: #e05555; }
+    #allow-dup-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font: 13px monospace;
+      color: #888;
+      cursor: pointer;
+      align-self: flex-start;
+      user-select: none;
+    }
+    #allow-dup-label:hover { color: #aaa; }
+    #allow-dup-checkbox { cursor: pointer; accent-color: #3d9a5a; width: 14px; height: 14px; }
+    #import-btns { display: flex; gap: 12px; }
+    #btn-import-cancel {
+      font: bold 13px monospace;
+      color: #aaa;
+      background: #252535;
+      border: 1px solid #444;
+      border-radius: 6px;
+      padding: 8px 20px;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: background 0.12s;
+    }
+    #btn-import-cancel:hover { background: #303045; }
+    #btn-import-confirm {
+      font: bold 13px monospace;
+      color: #aeffcb;
+      background: #2d7a4a;
+      border: 1px solid #3d9a5a;
+      border-radius: 6px;
+      padding: 8px 20px;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: background 0.12s, border-color 0.12s;
+    }
+    #btn-import-confirm:hover { background: #357a52; border-color: #5abf7a; }
   </style>
 </head>
 <body>
@@ -254,6 +411,31 @@
   </nav>
 
   <div id="kick-list"></div>
+
+  <div id="import-overlay">
+    <div id="import-dialog">
+      <p id="import-msg">공유받은 킥 테이블 코드를 붙여넣으세요.</p>
+      <input id="import-input" type="text" placeholder="킥 코드 입력" spellcheck="false" autocomplete="off">
+      <label id="allow-dup-label">
+        <input type="checkbox" id="allow-dup-checkbox">
+        중복 추가 허용하기
+      </label>
+      <div id="import-btns">
+        <button id="btn-import-cancel">취소하기</button>
+        <button id="btn-import-confirm">불러오기</button>
+      </div>
+    </div>
+  </div>
+  <div id="confirm-overlay">
+    <div id="confirm-dialog">
+      <p id="confirm-msg">킥 테이블을 삭제하시겠습니까?<br>이 작업은 되돌릴 수 없습니다.</p>
+      <div id="confirm-btns">
+        <button id="btn-cancel">취소</button>
+        <button id="btn-delete">삭제</button>
+      </div>
+    </div>
+  </div>
+  <div id="toast"></div>
 
   <script type="module" src="library_kick.js"></script>
 </body>

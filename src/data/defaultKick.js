@@ -4,6 +4,7 @@
 export const DEFAULT_KICK = {
   formatVersion: 1,
   name: "SRS 킥 테이블",
+  code: "srstable",
   tables: [
     {
       name: "JLSTZ",

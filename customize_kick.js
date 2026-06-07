@@ -1,8 +1,48 @@
 import { getPacks } from './src/data/packStore.js';
-import { getKickSets, saveKickSets } from './src/data/kickStore.js';
+import { getKickSets, saveKickSets, encodeKick } from './src/data/kickStore.js';
 
 /* ── 이탈 방지 ── */
 let saving = false;
+
+/* ── 이름 변경 ── */
+function showRenameDialog() {
+  const input = document.getElementById('rename-input');
+  input.value = draftKickSet.name;
+  input.classList.remove('invalid');
+  document.getElementById('rename-overlay').classList.add('visible');
+  input.focus();
+  input.select();
+}
+
+function hideRenameDialog() {
+  document.getElementById('rename-overlay').classList.remove('visible');
+  document.getElementById('rename-input').classList.remove('invalid');
+}
+
+function saveKickName() {
+  const input = document.getElementById('rename-input');
+  const newName = input.value.trim();
+  if (!newName) {
+    input.classList.add('invalid');
+    input.focus();
+    return;
+  }
+  if (newName === draftKickSet.name) {
+    hideRenameDialog();
+    return;
+  }
+  draftKickSet.name = newName;
+  document.querySelector('.page-title').textContent = newName;
+  hideRenameDialog();
+  showToast('이름을 변경했습니다.');
+}
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('visible');
+  setTimeout(() => toast.classList.remove('visible'), 1000);
+}
 
 window.addEventListener('beforeunload', e => {
   if (saving) return;
@@ -517,6 +557,10 @@ function loadTabTable() {
 
   draftKickSet = JSON.parse(JSON.stringify(kickSet));
 
+  if (kickSet.name) {
+    document.querySelector('.page-title').textContent = kickSet.name;
+  }
+
   kickTabBar.querySelectorAll('.tab').forEach(t => t.remove());
   kickSet.tables.forEach((table, i) => {
     const tab = document.createElement('button');
@@ -557,8 +601,22 @@ document.querySelector('.save-btn').addEventListener('click', () => {
     flushCurrentTabToDraft();
     flushMappingsToDraft();
     sets[idx] = washKickSet(draftKickSet);
+    sets[idx].code = encodeKick(sets[idx]);
     saveKickSets(sets);
   }
   saving = true;
   location.href = 'library_kick.html';
 });
+
+document.getElementById('kick-rename-btn').addEventListener('click', showRenameDialog);
+document.getElementById('btn-rename-cancel').addEventListener('click', hideRenameDialog);
+document.getElementById('btn-rename-save').addEventListener('click', saveKickName);
+document.getElementById('rename-overlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) hideRenameDialog();
+});
+const renameInput = document.getElementById('rename-input');
+renameInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') saveKickName();
+  if (e.key === 'Escape') hideRenameDialog();
+});
+renameInput.addEventListener('input', () => renameInput.classList.remove('invalid'));
