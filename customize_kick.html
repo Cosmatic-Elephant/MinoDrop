@@ -437,6 +437,9 @@
     #kick-table .cell-highlight {
       background: #2e4a80 !important;
     }
+    #kick-table .cell-preview {
+      color: #FFD700 !important;
+    }
 
     /* ── Rename dialog ── */
     #rename-overlay {
@@ -507,6 +510,61 @@
       transition: background 0.12s, border-color 0.12s;
     }
     #btn-rename-save:hover { background: #357a52; border-color: #5abf7a; }
+
+    /* ── Mirror confirm dialog ── */
+    #mirror-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    #mirror-overlay.visible { display: flex; }
+    #mirror-dialog {
+      background: #16213e;
+      border: 1px solid #444;
+      border-radius: 10px;
+      padding: 28px 32px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+      min-width: 300px;
+    }
+    #mirror-msg {
+      font: 15px monospace;
+      color: #ccc;
+      text-align: center;
+      line-height: 1.7;
+      letter-spacing: 0.03em;
+    }
+    #mirror-btns { display: flex; gap: 12px; }
+    #btn-mirror-cancel {
+      font: bold 13px monospace;
+      color: #aaa;
+      background: #252535;
+      border: 1px solid #444;
+      border-radius: 6px;
+      padding: 8px 20px;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: background 0.12s;
+    }
+    #btn-mirror-cancel:hover { background: #303045; }
+    #btn-mirror-confirm {
+      font: bold 13px monospace;
+      color: #aeffcb;
+      background: #2d7a4a;
+      border: 1px solid #3d9a5a;
+      border-radius: 6px;
+      padding: 8px 20px;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: background 0.12s, border-color 0.12s;
+    }
+    #btn-mirror-confirm:hover { background: #357a52; border-color: #5abf7a; }
 
     /* ── Toast ── */
     #toast {
@@ -597,9 +655,7 @@
       </div>
 
       <div id="mirror-row">
-        <button class="mirror-btn" id="btn-cw-ccw-mirror">시계 -&gt; 반시계 미러링</button>
-        <button class="mirror-btn" id="btn-lr-mirror">좌우 미러링</button>
-        <button class="mirror-btn" id="btn-tb-mirror">상하 미러링</button>
+        <button class="mirror-btn" id="btn-lr-mirror">오프셋 좌우 미러링</button>
       </div>
 
       <div id="table-section">
@@ -662,6 +718,15 @@
       <div id="rename-btns">
         <button id="btn-rename-cancel">취소하기</button>
         <button id="btn-rename-save">저장하기</button>
+      </div>
+    </div>
+  </div>
+  <div id="mirror-overlay">
+    <div id="mirror-dialog">
+      <p id="mirror-msg">미러링으로 나머지 절반을 채울까요?<br>버튼에 마우스를 올리면 결과를 미리 볼 수 있습니다.</p>
+      <div id="mirror-btns">
+        <button id="btn-mirror-cancel">취소</button>
+        <button id="btn-mirror-confirm">미러링하기</button>
       </div>
     </div>
   </div>

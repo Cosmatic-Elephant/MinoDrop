@@ -608,6 +608,103 @@ document.querySelector('.save-btn').addEventListener('click', () => {
   location.href = 'library_kick.html';
 });
 
+/* ── 미러 버튼 행 하이라이트 & 미리보기 ── */
+let mirrorPreviewOriginals = null;
+
+function highlightRows(rowIndices) {
+  clearCrossHighlights();
+  lastHighlightedCell = null;
+  const rows = [...kickTable.querySelectorAll('tbody tr')];
+  rowIndices.forEach(i => {
+    const row = rows[i];
+    if (!row) return;
+    [...row.cells].forEach(cell => cell.classList.add('cell-highlight'));
+  });
+}
+
+function clearMirrorPreview() {
+  if (!mirrorPreviewOriginals) return;
+  mirrorPreviewOriginals.forEach(({ cell, original }) => {
+    cell.textContent = original;
+    cell.classList.remove('cell-preview');
+  });
+  mirrorPreviewOriginals = null;
+}
+
+function commitMirrorPreview() {
+  if (!mirrorPreviewOriginals) return;
+  mirrorPreviewOriginals.forEach(({ cell }) => cell.classList.remove('cell-preview'));
+  mirrorPreviewOriginals = null;
+}
+
+function computeLRValue(srcText) {
+  const m = srcText.trim().match(/^\(\s*(-?\d+)\s*,\s*(-?\d+)\s*\)$/);
+  return m ? `(${-parseInt(m[1], 10)}, ${m[2]})` : srcText;
+}
+
+const LR_PAIRS = [[0, 4], [1, 5], [6, 2], [7, 3]];
+
+function showPreviewLR() {
+  const rows = [...kickTable.querySelectorAll('tbody tr')];
+  mirrorPreviewOriginals = [];
+  LR_PAIRS.forEach(([src, dst]) => {
+    const srcRow = rows[src];
+    const dstRow = rows[dst];
+    if (!srcRow || !dstRow) return;
+    for (let col = 1; col < srcRow.cells.length; col++) {
+      const dstCell = dstRow.cells[col];
+      mirrorPreviewOriginals.push({ cell: dstCell, original: dstCell.textContent });
+      dstCell.textContent = computeLRValue(srcRow.cells[col].textContent);
+      dstCell.classList.add('cell-preview');
+    }
+  });
+}
+
+document.getElementById('btn-lr-mirror').addEventListener('mouseenter', () => {
+  highlightRows([4, 5, 2, 3]);
+  showPreviewLR();
+});
+
+const mirrorOverlay = document.getElementById('mirror-overlay');
+
+function hideMirrorDialog() {
+  mirrorOverlay.classList.remove('visible');
+  clearMirrorPreview();
+  clearCrossHighlights();
+  lastHighlightedCell = null;
+}
+
+document.getElementById('mirror-row').addEventListener('mouseleave', () => {
+  if (mirrorOverlay.classList.contains('visible')) return;
+  clearMirrorPreview();
+  clearCrossHighlights();
+  lastHighlightedCell = null;
+});
+
+document.getElementById('btn-lr-mirror').addEventListener('click', () => {
+  mirrorOverlay.classList.add('visible');
+});
+
+document.getElementById('btn-mirror-cancel').addEventListener('click', hideMirrorDialog);
+mirrorOverlay.addEventListener('click', e => {
+  if (e.target === mirrorOverlay) hideMirrorDialog();
+});
+
+document.getElementById('btn-mirror-confirm').addEventListener('click', () => {
+  commitMirrorPreview();
+  const rows = [...kickTable.querySelectorAll('tbody tr')];
+  LR_PAIRS.forEach(([src, dst]) => {
+    const srcRow = rows[src];
+    const dstRow = rows[dst];
+    if (!srcRow || !dstRow) return;
+    for (let col = 1; col < srcRow.cells.length; col++)
+      dstRow.cells[col].textContent = computeLRValue(srcRow.cells[col].textContent);
+  });
+  mirrorOverlay.classList.remove('visible');
+  clearCrossHighlights();
+  lastHighlightedCell = null;
+});
+
 document.getElementById('kick-rename-btn').addEventListener('click', showRenameDialog);
 document.getElementById('btn-rename-cancel').addEventListener('click', hideRenameDialog);
 document.getElementById('btn-rename-save').addEventListener('click', saveKickName);
