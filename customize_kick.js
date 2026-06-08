@@ -301,6 +301,7 @@ function syncTableSelects() {
     labels.forEach(label => sel.add(new Option(label, label)));
     sel.add(new Option('없음', '없음'));
     if ([...sel.options].some(o => o.value === current)) sel.value = current;
+    else sel.value = '없음';
   });
 }
 
