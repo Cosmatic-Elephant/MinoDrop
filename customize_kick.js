@@ -616,22 +616,33 @@ function handleHeaderCellHover(tr) {
 kickTable.addEventListener('mouseover', e => {
   const td = e.target.closest('tbody td');
   if (td === lastHighlightedCell) return;
-  isHoveringTable = true;
   clearCrossHighlights();
   lastHighlightedCell = td;
   if (!td) {
     ghostMino = null;
-    displayFromState = 0;
+    displayFromState = idleFromState;
+    isHoveringTable = false;
+    kickStatusText.textContent = STATUS_IDLE;
     drawKickGrid();
     return;
   }
+  const tr = td.closest('tr');
+  if (filterStateOn && !tr.classList.contains('row-from-active')) {
+    ghostMino = null;
+    displayFromState = idleFromState;
+    isHoveringTable = false;
+    kickStatusText.textContent = STATUS_IDLE;
+    drawKickGrid();
+    return;
+  }
+  isHoveringTable = true;
   if (td.cellIndex === 0) {
-    handleHeaderCellHover(td.closest('tr'));
+    handleHeaderCellHover(tr);
     return;
   }
   kickTable.querySelector('thead tr').cells[td.cellIndex]?.classList.add('cell-highlight');
-  td.closest('tr').cells[0].classList.add('cell-highlight');
-  const rowIndex = [...kickTable.querySelector('tbody').rows].indexOf(td.closest('tr'));
+  tr.cells[0].classList.add('cell-highlight');
+  const rowIndex = [...kickTable.querySelector('tbody').rows].indexOf(tr);
   updateGhostFromCell(rowIndex, td);
 });
 
@@ -1098,10 +1109,16 @@ function paintKickCell(e) {
   const rect = canvas.getBoundingClientRect();
   const col = Math.floor((e.clientX - rect.left) / CELL);
   const row = Math.floor((e.clientY - rect.top)  / CELL);
-  if (row >= 0 && row < N && col >= 0 && col < N) {
-    kickGridState[row][col] = currentKickTool === 'eraser' ? 0 : 1;
-    drawKickGrid();
+  if (row < 0 || row >= N || col < 0 || col >= N) return;
+  if (currentKickTool === 'eraser') {
+    kickGridState[row][col] = 0;
+  } else {
+    const { ghost, mino } = buildOccupancySets();
+    const key = row * N + col;
+    if (ghost.has(key) || mino.has(key)) return;
+    kickGridState[row][col] = 1;
   }
+  drawKickGrid();
 }
 
 canvas.addEventListener('mousedown', e => {
@@ -1154,6 +1171,14 @@ document.getElementById('rotate-cw-btn').addEventListener('click', () => {
     ghostMino = null;
     drawKickGrid();
   }
+});
+
+let filterStateOn = true;
+const filterStateToggleBtn = document.getElementById('toggle-filter-state');
+filterStateToggleBtn.addEventListener('click', () => {
+  filterStateOn = !filterStateOn;
+  filterStateToggleBtn.classList.toggle('on', filterStateOn);
+  filterStateToggleBtn.textContent = filterStateOn ? 'ON' : 'OFF';
 });
 
 document.getElementById('kick-rename-btn').addEventListener('click', showRenameDialog);
