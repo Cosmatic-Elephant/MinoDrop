@@ -1035,7 +1035,7 @@ function loop(ts) {
     showOverlay('GAME OVER', `Score: ${plainScore}`, 'gameover');
     setMenuMode('gameover');
   } else if (!gameStarted) {
-    showOverlay('MIDROP', '', 'start');
+    showOverlay('Mino Drop', '', 'start');
     setMenuMode('start');
   } else if (manualPaused) {
     showOverlay('GAME PAUSED', '', 'pause');

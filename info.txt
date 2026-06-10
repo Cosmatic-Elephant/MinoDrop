@@ -1,0 +1,9 @@
+테트리스를 카피한 서비스 Mino Drop입니다.
+기존의 테트리스를 기능적으로 구현하고, 커스터마이징 기능을 중점으로 만들었습니다.
+버그가 있을 수 있고, 비정기적으로 업데이트 됩니다.
+
+Mino Drop은 개인적인 즐거움과 실험을 목적으로 만들어진 비영리 팬 프로젝트입니다.
+Tetris® 및 관련 상표권은 The Tetris Company, LLC에 있으며, 본 프로젝트는 The Tetris Company와 공식적인 제휴 또는 승인 관계에 있지 않습니다.
+
+이 프로젝트의 코드는 100% Claud Code로 작성되었으며, 작성된 코드는 아래 주소에서 확인하실 수 있습니다.
+https://github.com/Cosmatic-Elephant/MinoDrop

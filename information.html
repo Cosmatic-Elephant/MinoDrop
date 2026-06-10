@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MIDROP - 서비스 정보</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #1a1a2e;
+      min-height: 100vh;
+      font-family: monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 24px 0;
+      gap: 16px;
+    }
+    .page-header {
+      width: 550px;
+      min-width: 550px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .back-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font: 14px monospace;
+      color: #888;
+      cursor: pointer;
+      text-decoration: none;
+      transition: color 0.12s;
+      flex-shrink: 0;
+    }
+    .back-btn:hover { color: #ccc; }
+    .back-arrow {
+      width: 16px;
+      height: 16px;
+      border-left: 2px solid currentColor;
+      border-bottom: 2px solid currentColor;
+      transform: rotate(45deg);
+      flex-shrink: 0;
+    }
+    .page-title-group {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .page-breadcrumb {
+      font: 12px monospace;
+      color: #555;
+      letter-spacing: 0.03em;
+    }
+    .page-title {
+      font: bold 22px monospace;
+      color: #fff;
+      letter-spacing: 0.04em;
+    }
+    .divider {
+      width: 550px;
+      min-width: 550px;
+      height: 1px;
+      background: #2a2a3e;
+    }
+    .content {
+      width: 550px;
+      min-width: 550px;
+      padding-bottom: 32px;
+    }
+    .info-box {
+      background: #16213e;
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 20px;
+      font: 14px monospace;
+      color: #ccc;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+  </style>
+</head>
+<body>
+  <div class="page-header">
+    <a class="back-btn" href="index.html" title="메인으로">
+      <span class="back-arrow"></span>
+      메인
+    </a>
+    <div class="page-title-group">
+      <span class="page-breadcrumb">메인 / 서비스 정보</span>
+      <span class="page-title">서비스 정보</span>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="content">
+    <div class="info-box" id="info-text"></div>
+  </div>
+
+  <script>
+    fetch('./info.txt')
+      .then(r => r.text())
+      .then(text => {
+        document.getElementById('info-text').textContent = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+      });
+  </script>
+</body>
+</html>
