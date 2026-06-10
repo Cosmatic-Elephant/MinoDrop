@@ -57,14 +57,217 @@ const CELL = 30, N = 9;
 canvas.width  = N * CELL;
 canvas.height = N * CELL;
 
-ctx.fillStyle = '#111';
-ctx.fillRect(0, 0, canvas.width, canvas.height);
+let kickGridState = Array.from({ length: N }, () => new Array(N).fill(0));
+const kickUndoStack = [];
+const kickRedoStack = [];
+let kickSnapshotBefore = null;
+let selectedMino = null;
+let ghostMino = null; // { shape, offsetX, offsetY }
+let displayFromState = 0;
 
-ctx.strokeStyle = '#1c1c1c';
-ctx.lineWidth = 1;
-for (let r = 0; r < N; r++)
-  for (let c = 0; c < N; c++)
-    ctx.strokeRect(c * CELL, r * CELL, CELL, CELL);
+// 렌더링 우선순위: index 0이 최우선. 같은 칸에 겹치면 낮은 우선순위는 무시됨.
+let renderPriority = ['ghost', 'mino', 'gray'];
+
+const ghostTargetSelect = document.getElementById('ghost-target-select');
+const ghostStyleSelect  = document.getElementById('ghost-style-select');
+const kickStatusText    = document.getElementById('kick-status-text');
+
+const STATUS_IDLE    = 'ℹ️ 표에 마우스를 올려 오프셋 미리보기 가능';
+const STATUS_OK      = 'ℹ️ 해당 오프셋으로 회전 가능';
+const STATUS_BLOCKED = '⚠️ 해당 오프셋으로 회전할 수 없음';
+
+let isHoveringTable = false;
+kickStatusText.textContent = STATUS_IDLE;
+
+function cloneKickState() {
+  return kickGridState.map(row => [...row]);
+}
+
+function kickStatesEqual(a, b) {
+  return a.every((row, r) => row.every((val, c) => val === b[r][c]));
+}
+
+function drawKickCell(col, row) {
+  const x = col * CELL + 1, y = row * CELL + 1, s = CELL - 2;
+  const hi = Math.max(3, Math.round(CELL * 0.13));
+  const sh = Math.max(2, Math.round(CELL * 0.10));
+  ctx.fillStyle = '#cccccc';
+  ctx.fillRect(x, y, s, s);
+  ctx.fillStyle = 'rgba(255,255,255,0.18)';
+  ctx.fillRect(x, y, s, hi);
+  ctx.fillRect(x, y, hi, s);
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.fillRect(x, y + s - sh, s, sh);
+  ctx.fillRect(x + s - sh, y, sh, s);
+}
+
+function rotateShapeCW(shape) {
+  const rows = shape.length;
+  const cols = shape[0]?.length ?? 0;
+  const next = Array.from({ length: cols }, () => Array(rows).fill(0));
+  for (let r = 0; r < rows; r++)
+    for (let c = 0; c < cols; c++)
+      next[c][rows - 1 - r] = shape[r][c];
+  return next;
+}
+
+function getRotatedShape(baseShape, toState) {
+  let shape = baseShape.map(row => [...row]);
+  for (let i = 0; i < (toState % 4); i++) shape = rotateShapeCW(shape);
+  return shape;
+}
+
+
+function drawGhostCell(col, row) {
+  const style = ghostStyleSelect.value;
+  if (style === 'translucent') {
+    ctx.save();
+    ctx.globalAlpha = 0.25;
+    drawMinoCell(col, row, selectedMino ? selectedMino.color : '#ffffff');
+    ctx.restore();
+  } else {
+    const x = col * CELL + 2, y = row * CELL + 2, s = CELL - 4;
+    ctx.save();
+    ctx.strokeStyle = selectedMino ? selectedMino.color : '#ffffff';
+    ctx.globalAlpha = 0.53;
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(x, y, s, s);
+    ctx.restore();
+  }
+}
+
+function drawXCell(col, row) {
+  ctx.save();
+  ctx.fillStyle = '#ff0000';
+  ctx.font = `bold ${CELL}px monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('×', col * CELL + CELL / 2, row * CELL + CELL / 2);
+  ctx.restore();
+}
+
+function drawMinoCell(col, row, color) {
+  const x = col * CELL + 1, y = row * CELL + 1, s = CELL - 2;
+  const hi = Math.max(3, Math.round(CELL * 0.13));
+  const sh = Math.max(2, Math.round(CELL * 0.10));
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y, s, s);
+  ctx.fillStyle = 'rgba(255,255,255,0.18)';
+  ctx.fillRect(x, y, s, hi);
+  ctx.fillRect(x, y, hi, s);
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.fillRect(x, y + s - sh, s, sh);
+  ctx.fillRect(x + s - sh, y, sh, s);
+}
+
+function buildOccupancySets() {
+  const ghost = new Set();
+  const mino = new Set();
+
+  if (ghostMino && selectedMino) {
+    const { shape: gShape, offsetX, offsetY } = ghostMino;
+    const gRows = gShape.length;
+    const gCols = gShape[0]?.length ?? 0;
+    const gStartR = Math.floor((N - gRows) / 2) + offsetY;
+    const gStartC = Math.floor((N - gCols) / 2) + offsetX;
+    for (let r = 0; r < gRows; r++)
+      for (let c = 0; c < gCols; c++) {
+        if (!gShape[r][c]) continue;
+        const gr = gStartR + r, gc = gStartC + c;
+        if (gr >= 0 && gr < N && gc >= 0 && gc < N) ghost.add(gr * N + gc);
+      }
+  }
+
+  if (selectedMino) {
+    const shape = getRotatedShape(selectedMino.shape, displayFromState);
+    const rows = shape.length;
+    if (rows > 0) {
+      const cols = shape[0].length;
+      const startR = Math.floor((N - rows) / 2);
+      const startC = Math.floor((N - cols) / 2);
+      for (let r = 0; r < rows; r++)
+        for (let c = 0; c < cols; c++)
+          if (shape[r][c]) mino.add((startR + r) * N + (startC + c));
+    }
+  }
+
+  return { ghost, mino };
+}
+
+function drawKickGrid() {
+  ctx.fillStyle = '#111';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.strokeStyle = '#1c1c1c';
+  ctx.lineWidth = 1;
+
+  const { ghost, mino } = buildOccupancySets();
+  const isBefore = ghostTargetSelect.value === 'before';
+  const drawMino  = isBefore ? ghost : mino;
+  const drawGhost = isBefore ? mino  : ghost;
+  const priority  = isBefore ? ['mino', 'ghost', 'gray'] : renderPriority;
+
+  let hasX = false;
+  for (let r = 0; r < N; r++) {
+    for (let c = 0; c < N; c++) {
+      ctx.strokeRect(c * CELL, r * CELL, CELL, CELL);
+      const key = r * N + c;
+      const isGray = kickGridState[r][c] === 1;
+      const xCondition = !mino.has(key) && ghost.has(key) && isGray;
+      if (xCondition) { hasX = true; drawXCell(c, r); continue; }
+      const occupied = {
+        ghost: drawGhost.has(key),
+        mino:  drawMino.has(key),
+        gray:  isGray,
+      };
+      for (const layer of priority) {
+        if (!occupied[layer]) continue;
+        if (layer === 'ghost') drawGhostCell(c, r);
+        else if (layer === 'mino') drawMinoCell(c, r, selectedMino.color);
+        else if (layer === 'gray') drawKickCell(c, r);
+        break;
+      }
+    }
+  }
+
+  if (isHoveringTable) {
+    kickStatusText.textContent = hasX ? STATUS_BLOCKED : STATUS_OK;
+  }
+}
+
+function findTableForMino(minoName) {
+  // 드래프트: 현재 필드 UI 상태 확인
+  const inputs = [...fieldsCol.querySelectorAll('.kick-input')];
+  for (const input of inputs) {
+    if (input.value.trim() !== minoName) continue;
+    const tableName = input.closest('.field-row').querySelector('.table-select').value;
+    if (tableName && tableName !== '없음') return tableName;
+  }
+  // 원본 데이터 폴백
+  const raw = sessionStorage.getItem('midrop_editing_kick_idx');
+  const idx = raw !== null ? parseInt(raw, 10) : -1;
+  if (idx < 0) return null;
+  let sets;
+  try { sets = getKickSets(); } catch { return null; }
+  const found = sets[idx]?.minoMappings?.find(m => m.minoName === minoName)?.tableName ?? null;
+  return (found && found !== '없음') ? found : null;
+}
+
+function activateTabByName(tableName) {
+  const tabs = [...kickTabBar.querySelectorAll('.tab')];
+  const target = tabs.find(t => t.firstChild.textContent.trim() === tableName);
+  if (!target || target.classList.contains('active')) return;
+  flushCurrentTabToDraft();
+  tabs.forEach(t => t.classList.remove('active'));
+  target.classList.add('active');
+  loadTabTable();
+}
+
+function updateKickHistoryUI() {
+  document.getElementById('kick-action-undo').classList.toggle('available', kickUndoStack.length > 0);
+  document.getElementById('kick-action-redo').classList.toggle('available', kickRedoStack.length > 0);
+}
+
+drawKickGrid();
 
 /* ── 행 추가/삭제 ── */
 const fieldsCol = document.getElementById('fields-col');
@@ -132,6 +335,21 @@ function syncMinoSelect() {
   addMinoBtn.disabled = false;
 }
 
+function updateSelectedMino() {
+  if (packSelect.value === '' || minoSelect.value === '') {
+    selectedMino = null;
+    return;
+  }
+  let packs = [];
+  try { packs = getPacks(); } catch {}
+  const pack = packs[parseInt(packSelect.value, 10)];
+  if (!pack) { selectedMino = null; return; }
+  const mino = pack.minos[parseInt(minoSelect.value, 10)];
+  if (!mino || !mino.shape || mino.shape.length === 0) { selectedMino = null; return; }
+  const color = mino.color.startsWith('#') ? mino.color : '#' + mino.color;
+  selectedMino = { shape: mino.shape, color };
+}
+
 function loadPackSelect() {
   packSelect.innerHTML = '';
   let packs = [];
@@ -144,9 +362,40 @@ function loadPackSelect() {
   syncMinoSelect();
 }
 
-packSelect.addEventListener('change', syncMinoSelect);
+packSelect.addEventListener('change', () => {
+  syncMinoSelect();
+  kickGridState = Array.from({ length: N }, () => new Array(N).fill(0));
+  kickUndoStack.length = 0;
+  kickRedoStack.length = 0;
+  ghostMino = null;
+  displayFromState = 0;
+  updateKickHistoryUI();
+  updateSelectedMino();
+  drawKickGrid();
+});
+
+minoSelect.addEventListener('change', () => {
+  kickGridState = Array.from({ length: N }, () => new Array(N).fill(0));
+  kickUndoStack.length = 0;
+  kickRedoStack.length = 0;
+  ghostMino = null;
+  displayFromState = 0;
+  updateKickHistoryUI();
+  updateSelectedMino();
+  const minoName = minoSelect.options[minoSelect.selectedIndex]?.text ?? '';
+  if (minoName) {
+    const tableName = findTableForMino(minoName);
+    if (tableName) activateTabByName(tableName);
+  }
+  drawKickGrid();
+});
+
+ghostTargetSelect.addEventListener('change', () => drawKickGrid());
+ghostStyleSelect.addEventListener('change',  () => drawKickGrid());
 
 loadPackSelect();
+updateSelectedMino();
+drawKickGrid();
 
 /* ── 킥 테이블 ── */
 const kickTable  = document.getElementById('kick-table');
@@ -265,19 +514,118 @@ function clearCrossHighlights() {
   kickTable.querySelectorAll('.cell-highlight').forEach(el => el.classList.remove('cell-highlight'));
 }
 
+function updateGhostFromCell(rowIndex, td) {
+  if (!selectedMino || rowIndex < 0 || rowIndex >= ROW_KEYS.length) {
+    ghostMino = null; displayFromState = 0; drawKickGrid(); return;
+  }
+  if (td.querySelector('.cell-input')) {
+    ghostMino = null; displayFromState = 0; drawKickGrid(); return;
+  }
+  const rowKey = ROW_KEYS[rowIndex];
+  const arrowIdx = rowKey.indexOf('->');
+  if (arrowIdx === -1) { ghostMino = null; displayFromState = 0; drawKickGrid(); return; }
+  const fromState = parseInt(rowKey.slice(0, arrowIdx), 10);
+  const toState = parseInt(rowKey.slice(arrowIdx + 2), 10);
+
+  const cellText = td.textContent.trim();
+  const m = cellText.match(/^\(\s*(-?\d+)\s*,\s*(-?\d+)\s*\)$/);
+  if (!m) { ghostMino = null; displayFromState = 0; drawKickGrid(); return; }
+
+  displayFromState = fromState;
+  ghostMino = {
+    shape: getRotatedShape(selectedMino.shape, toState),
+    offsetX: parseInt(m[1], 10),
+    offsetY: parseInt(m[2], 10),
+  };
+  drawKickGrid();
+}
+
+function computeHasXForCell(rowIndex, td) {
+  if (!selectedMino || rowIndex < 0 || rowIndex >= ROW_KEYS.length) return true;
+  if (td.querySelector('.cell-input')) return true;
+  const rowKey = ROW_KEYS[rowIndex];
+  const arrowIdx = rowKey.indexOf('->');
+  if (arrowIdx === -1) return true;
+  const fromState = parseInt(rowKey.slice(0, arrowIdx), 10);
+  const toState   = parseInt(rowKey.slice(arrowIdx + 2), 10);
+  const m = td.textContent.trim().match(/^\(\s*(-?\d+)\s*,\s*(-?\d+)\s*\)$/);
+  if (!m) return true;
+
+  const savedGhost = ghostMino;
+  const savedFrom  = displayFromState;
+  displayFromState = fromState;
+  ghostMino = {
+    shape: getRotatedShape(selectedMino.shape, toState),
+    offsetX: parseInt(m[1], 10),
+    offsetY: parseInt(m[2], 10),
+  };
+
+  const { ghost, mino } = buildOccupancySets();
+  const isBefore = ghostTargetSelect.value === 'before';
+  let hasX = false;
+  outer: for (let r = 0; r < N; r++) {
+    for (let c = 0; c < N; c++) {
+      const key = r * N + c;
+      const isGray = kickGridState[r][c] === 1;
+      if (!mino.has(key) && ghost.has(key) && isGray) { hasX = true; break outer; }
+    }
+  }
+
+  ghostMino = savedGhost;
+  displayFromState = savedFrom;
+  return hasX;
+}
+
+function handleHeaderCellHover(tr) {
+  const tbody = kickTable.querySelector('tbody');
+  const rowIndex = [...tbody.rows].indexOf(tr);
+  tr.cells[0].classList.add('cell-highlight');
+
+  const cells = [...tr.cells].slice(1);
+  for (const td of cells) {
+    if (computeHasXForCell(rowIndex, td)) continue;
+    kickTable.querySelector('thead tr').cells[td.cellIndex]?.classList.add('cell-highlight');
+    td.classList.add('cell-highlight');
+    updateGhostFromCell(rowIndex, td);
+    return;
+  }
+
+  ghostMino = null;
+  displayFromState = 0;
+  drawKickGrid();
+  kickStatusText.textContent = '⚠️ 해당 지형에서 회전 불가능';
+}
+
 kickTable.addEventListener('mouseover', e => {
   const td = e.target.closest('tbody td');
   if (td === lastHighlightedCell) return;
+  isHoveringTable = true;
   clearCrossHighlights();
   lastHighlightedCell = td;
-  if (!td || td.cellIndex === 0) return;
+  if (!td) {
+    ghostMino = null;
+    displayFromState = 0;
+    drawKickGrid();
+    return;
+  }
+  if (td.cellIndex === 0) {
+    handleHeaderCellHover(td.closest('tr'));
+    return;
+  }
   kickTable.querySelector('thead tr').cells[td.cellIndex]?.classList.add('cell-highlight');
   td.closest('tr').cells[0].classList.add('cell-highlight');
+  const rowIndex = [...kickTable.querySelector('tbody').rows].indexOf(td.closest('tr'));
+  updateGhostFromCell(rowIndex, td);
 });
 
 kickTable.addEventListener('mouseleave', () => {
   clearCrossHighlights();
   lastHighlightedCell = null;
+  ghostMino = null;
+  displayFromState = 0;
+  isHoveringTable = false;
+  kickStatusText.textContent = STATUS_IDLE;
+  drawKickGrid();
 });
 
 /* ── 탭 바 ── */
@@ -592,6 +940,15 @@ function loadTabTable() {
   loadTabTable();
 })();
 
+// 초기 로드 시 선택된 미노의 매칭 테이블 활성화
+{
+  const initMinoName = minoSelect.options[minoSelect.selectedIndex]?.text ?? '';
+  if (initMinoName) {
+    const initTableName = findTableForMino(initMinoName);
+    if (initTableName) activateTabByName(initTableName);
+  }
+}
+
 /* ── 저장 ── */
 document.querySelector('.save-btn').addEventListener('click', () => {
   const raw = sessionStorage.getItem('midrop_editing_kick_idx');
@@ -704,6 +1061,64 @@ document.getElementById('btn-mirror-confirm').addEventListener('click', () => {
   mirrorOverlay.classList.remove('visible');
   clearCrossHighlights();
   lastHighlightedCell = null;
+});
+
+/* ── 킥 테스트 도구 선택 ── */
+let currentKickTool = 'pencil';
+const kickToolIcons = document.querySelectorAll('#kick-tool-pencil, #kick-tool-eraser');
+kickToolIcons.forEach(img => {
+  img.addEventListener('click', () => {
+    kickToolIcons.forEach(i => i.classList.remove('selected'));
+    img.classList.add('selected');
+    currentKickTool = img.id.replace('kick-tool-', '');
+  });
+});
+
+/* ── 킥 테스트 드로잉 ── */
+let kickDrawing = false;
+
+function paintKickCell(e) {
+  const rect = canvas.getBoundingClientRect();
+  const col = Math.floor((e.clientX - rect.left) / CELL);
+  const row = Math.floor((e.clientY - rect.top)  / CELL);
+  if (row >= 0 && row < N && col >= 0 && col < N) {
+    kickGridState[row][col] = currentKickTool === 'eraser' ? 0 : 1;
+    drawKickGrid();
+  }
+}
+
+canvas.addEventListener('mousedown', e => {
+  kickSnapshotBefore = cloneKickState();
+  kickDrawing = true;
+  paintKickCell(e);
+});
+window.addEventListener('mousemove', e => { if (kickDrawing) paintKickCell(e); });
+window.addEventListener('mouseup', () => {
+  if (kickDrawing) {
+    if (!kickStatesEqual(kickSnapshotBefore, kickGridState)) {
+      kickUndoStack.push(kickSnapshotBefore);
+      kickRedoStack.length = 0;
+      updateKickHistoryUI();
+    }
+    kickSnapshotBefore = null;
+  }
+  kickDrawing = false;
+});
+
+document.getElementById('kick-action-undo').addEventListener('click', () => {
+  if (kickUndoStack.length === 0) return;
+  kickRedoStack.push(cloneKickState());
+  kickGridState = kickUndoStack.pop();
+  drawKickGrid();
+  updateKickHistoryUI();
+});
+
+document.getElementById('kick-action-redo').addEventListener('click', () => {
+  if (kickRedoStack.length === 0) return;
+  kickUndoStack.push(cloneKickState());
+  kickGridState = kickRedoStack.pop();
+  drawKickGrid();
+  updateKickHistoryUI();
 });
 
 document.getElementById('kick-rename-btn').addEventListener('click', showRenameDialog);
