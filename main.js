@@ -46,6 +46,8 @@ const inputLockDelay     = document.getElementById('input-lock-delay');
 const inputInfinityLimit = document.getElementById('input-infinity-limit');
 const board       = new Board();
 const renderer    = new Renderer(canvas);
+renderer.ghostWhite = settings.GHOST_WHITE;
+renderer.ghostStyle = settings.GHOST_STYLE;
 const kb          = new Keyboard(Object.values(settings.KEYBINDS));
 
 const INPUT_RULES = [
@@ -318,6 +320,7 @@ function applySettings() {
   }
 
   const next = new GameSettings();
+  next.KEYBINDS            = { ...settings.KEYBINDS };
   next.COLS                = Number(inputCols.value);
   next.ROWS                = Number(inputRows.value);
   next.SEED                = inputSeed.value.trim() || String(GameSettings.DEFAULTS.SEED);
