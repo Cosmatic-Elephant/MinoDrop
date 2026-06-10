@@ -64,6 +64,7 @@ let kickSnapshotBefore = null;
 let selectedMino = null;
 let ghostMino = null; // { shape, offsetX, offsetY }
 let displayFromState = 0;
+let idleFromState = 0;
 
 // 렌더링 우선순위: index 0이 최우선. 같은 칸에 겹치면 낮은 우선순위는 무시됨.
 let renderPriority = ['ghost', 'mino', 'gray'];
@@ -232,6 +233,20 @@ function drawKickGrid() {
   if (isHoveringTable) {
     kickStatusText.textContent = hasX ? STATUS_BLOCKED : STATUS_OK;
   }
+
+  updateTableRowHighlight();
+}
+
+function updateTableRowHighlight() {
+  const table = document.getElementById('kick-table');
+  if (!table) return;
+  const stateLabel = ['0', 'R', '2', 'L'];
+  const fromLabel = selectedMino ? stateLabel[displayFromState] : null;
+  table.querySelectorAll('tbody tr').forEach(tr => {
+    if (!fromLabel) { tr.classList.remove('row-from-active'); return; }
+    const rowFrom = (tr.cells[0]?.textContent ?? '').split('→')[0].trim();
+    tr.classList.toggle('row-from-active', rowFrom === fromLabel);
+  });
 }
 
 function findTableForMino(minoName) {
@@ -368,6 +383,7 @@ packSelect.addEventListener('change', () => {
   kickUndoStack.length = 0;
   kickRedoStack.length = 0;
   ghostMino = null;
+  idleFromState = 0;
   displayFromState = 0;
   updateKickHistoryUI();
   updateSelectedMino();
@@ -379,6 +395,7 @@ minoSelect.addEventListener('change', () => {
   kickUndoStack.length = 0;
   kickRedoStack.length = 0;
   ghostMino = null;
+  idleFromState = 0;
   displayFromState = 0;
   updateKickHistoryUI();
   updateSelectedMino();
@@ -622,7 +639,7 @@ kickTable.addEventListener('mouseleave', () => {
   clearCrossHighlights();
   lastHighlightedCell = null;
   ghostMino = null;
-  displayFromState = 0;
+  displayFromState = idleFromState;
   isHoveringTable = false;
   kickStatusText.textContent = STATUS_IDLE;
   drawKickGrid();
@@ -1119,6 +1136,24 @@ document.getElementById('kick-action-redo').addEventListener('click', () => {
   kickGridState = kickRedoStack.pop();
   drawKickGrid();
   updateKickHistoryUI();
+});
+
+document.getElementById('rotate-ccw-btn').addEventListener('click', () => {
+  idleFromState = (idleFromState + 3) % 4;
+  if (!isHoveringTable) {
+    displayFromState = idleFromState;
+    ghostMino = null;
+    drawKickGrid();
+  }
+});
+
+document.getElementById('rotate-cw-btn').addEventListener('click', () => {
+  idleFromState = (idleFromState + 1) % 4;
+  if (!isHoveringTable) {
+    displayFromState = idleFromState;
+    ghostMino = null;
+    drawKickGrid();
+  }
 });
 
 document.getElementById('kick-rename-btn').addEventListener('click', showRenameDialog);

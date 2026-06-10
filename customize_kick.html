@@ -103,8 +103,18 @@
     /* ── Content area ── */
     #content-area {
       display: flex;
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 24px;
+    }
+    #left-col {
+      display: flex;
       flex-direction: column;
-      align-items: center;
+      gap: 24px;
+    }
+    #right-col {
+      display: flex;
+      flex-direction: column;
       gap: 24px;
     }
 
@@ -208,6 +218,13 @@
       transition: color 0.12s, border-color 0.12s;
     }
     #add-row-btn:hover { color: #aaa; border-color: #666; }
+
+    /* ── Rotate / ghost-options rows ── */
+    #rotate-row, #ghost-options-row {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
 
     /* ── Combo row ── */
     #combo-row {
@@ -474,6 +491,11 @@
     #kick-table .cell-preview {
       color: #FFD700 !important;
     }
+    /* 현재 출발 회전 상태 행 강조 */
+    #kick-table tbody tr.row-from-active td {
+      font-weight: bold;
+      color: #fff;
+    }
 
     /* ── Rename dialog ── */
     #rename-overlay {
@@ -643,11 +665,13 @@
 
     <div id="content-area">
 
+      <div id="left-col">
       <div id="editor-row">
         <div class="panel-section">
           <span class="section-title">킥 테스트</span>
           <canvas id="kick-grid"></canvas>
           <div id="kick-status-text"></div>
+          <div style="display:flex;flex-direction:row;gap:16px;">
           <div class="panel-section">
             <span class="section-title">작업</span>
             <div class="icon-row">
@@ -661,6 +685,7 @@
               <img class="tool-icon selected" id="kick-tool-pencil" src="img/pencil.png" alt="pencil">
               <img class="tool-icon" id="kick-tool-eraser" src="img/eraser.png" alt="eraser">
             </div>
+          </div>
           </div>
         </div>
         <div class="panel-section">
@@ -691,20 +716,11 @@
         </div>
       </div>
 
-      <div id="combo-row">
-        <div class="combo-group">
-          <span class="combo-label">미노 팩</span>
-          <select id="pack-select" class="combo-select"></select>
-        </div>
-        <div class="combo-group">
-          <span class="combo-label">미노</span>
-          <select id="mino-select" class="combo-select"></select>
-        </div>
-        <button id="add-mino-btn">추가하기</button>
+      <div id="rotate-row">
+        <button id="rotate-ccw-btn" class="mirror-btn">← 반시계 회전</button>
+        <button id="rotate-cw-btn" class="mirror-btn">→ 시계 회전</button>
       </div>
-
-      <div id="mirror-row">
-        <button class="mirror-btn" id="btn-lr-mirror">오프셋 좌우 미러링</button>
+      <div id="ghost-options-row">
         <div class="combo-group">
           <span class="combo-label">고스트 대상</span>
           <select id="ghost-target-select" class="combo-select">
@@ -720,7 +736,20 @@
           </select>
         </div>
       </div>
+      <div id="combo-row">
+        <div class="combo-group">
+          <span class="combo-label">미노 팩</span>
+          <select id="pack-select" class="combo-select"></select>
+        </div>
+        <div class="combo-group">
+          <span class="combo-label">미노</span>
+          <select id="mino-select" class="combo-select"></select>
+        </div>
+        <button id="add-mino-btn">추가하기</button>
+      </div>
+      </div><!-- /#left-col -->
 
+      <div id="right-col">
       <div id="table-section">
       <nav class="tab-bar" id="kick-tab-bar">
         <button class="tab active">테이블 1<span class="tab-close-btn">×</span></button>
@@ -768,9 +797,14 @@
         </div>
         <button id="add-col-btn" title="열 추가">+</button>
       </div>
-      </div>
+      </div><!-- /#table-section -->
 
-    </div>
+      <div id="mirror-row">
+        <button class="mirror-btn" id="btn-lr-mirror">오프셋 좌우 미러링</button>
+      </div><!-- /#mirror-row -->
+      </div><!-- /#right-col -->
+
+    </div><!-- /#content-area -->
 
   </div>
 
